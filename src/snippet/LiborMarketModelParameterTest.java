@@ -134,7 +134,7 @@ public class LiborMarketModelParameterTest {
 		/*
 		 * Create the libor tenor structure and the initial values
 		 */
-		double liborPeriodLength	= 0.5;
+		double liborPeriodLength	= 5.0;
 		double liborRateTimeHorzion	= 40.0;
 		TimeDiscretization liborPeriodDiscretization = new TimeDiscretization(0.0, (int) (liborRateTimeHorzion / liborPeriodLength), liborPeriodLength);
 
@@ -185,7 +185,7 @@ public class LiborMarketModelParameterTest {
 		properties.put("measure", LIBORMarketModel.Measure.SPOT.name());
 
 		// Choose log normal model
-		properties.put("stateSpace", LIBORMarketModel.StateSpace.LOGNORMAL.name());
+		properties.put("stateSpace", LIBORMarketModel.StateSpace.NORMAL.name());
 
 		// Empty array of calibration items - hence, model will use given covariance
 		LIBORMarketModel.CalibrationItem[] calibrationItems = new LIBORMarketModel.CalibrationItem[0];
@@ -219,6 +219,7 @@ public class LiborMarketModelParameterTest {
 			System.out.println(String.format("%9.3f",liborDiscounted));
 		}
 		System.out.println();
+		
 		System.out.println(liborMarketModelWithBrownianBridge.getNumberOfLibors());
 		System.out.println(((LIBORModelMonteCarloSimulation) liborMarketModelWithBrownianBridge).getNumberOfComponents());
 		System.out.println("At time:\tNumeraire:\tLast Libor:\tLast Libor discounted:");
@@ -226,11 +227,21 @@ public class LiborMarketModelParameterTest {
 			double time = liborMarketModelWithBrownianBridge.getTime(timeIndex);
 			
 			double numeraire = liborMarketModelWithBrownianBridge.getNumeraire(time).getAverage();
-			double libor     = liborMarketModelWithBrownianBridge.getLIBOR(timeIndex, liborMarketModelWithBrownianBridge.getNumberOfLibors()-1).invert().getAverage();
+			double libor     = liborMarketModelWithBrownianBridge.getLIBOR(timeIndex, liborMarketModelWithBrownianBridge.getNumberOfLibors()-1).getAverage();
 			double liborDiscounted = liborMarketModelWithBrownianBridge.getLIBOR(timeIndex, liborMarketModelWithBrownianBridge.getNumberOfLibors()-1).div(liborMarketModelWithBrownianBridge.getNumeraire(time)).getAverage();
 			System.out.print(time + "\t\t" + formatterNumeraire.format(numeraire) + "\t");
 			System.out.print(String.format("%9.3f", libor) + "\t");
 			System.out.println(String.format("%9.3f",liborDiscounted));
 		}
+		
+		for (int timeIndex = 0; timeIndex < liborMarketModelWithBrownianBridge.getTimeDiscretization().getNumberOfTimeSteps(); timeIndex++) {
+			double time = liborMarketModelWithBrownianBridge.getTime(timeIndex);
+			
+			double libor     = liborMarketModelWithBrownianBridge.getLIBOR(0,timeIndex).getAverage();
+			double brownian  = ((LIBORMarketModelWithBrownianBridge) liborMarketModelWithBrownianBridge.getModel()).getBrownianBridge(timeIndex).getAverage();
+			System.out.println(String.format("%9.3f", libor) + "\t");
+			System.out.println(brownian);
+		}
+		
 	}
 }

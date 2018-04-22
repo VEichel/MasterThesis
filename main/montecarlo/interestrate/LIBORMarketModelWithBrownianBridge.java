@@ -53,9 +53,15 @@ public class LIBORMarketModelWithBrownianBridge extends LIBORMarketModel impleme
 		for (int factorIndex = 0; factorIndex < liborDrifts.length; factorIndex++) {
 			drifts[factorIndex] = liborDrifts[factorIndex];
 		}
-		//testing
-		drifts[drifts.length - 1] = getRandomVariableForConstant(0.0);
-
+		//testing only normal
+		double time    = getTime(timeIndex);
+		int    previousLiborIndex = getLiborPeriodIndex(time);
+		if(previousLiborIndex<0) previousLiborIndex = (-previousLiborIndex-1)-1;		 //i
+		double previousLiborTime = getLiborPeriod(previousLiborIndex);   //T_i
+		double nextLiborTime     = getLiborPeriod(previousLiborIndex+1); //T_i+1
+		
+		drifts[drifts.length - 1] = realizationAtTimeIndex[drifts.length-1].mult(time - nextLiborTime);
+		
 		return drifts;
 	}
 	
@@ -73,7 +79,19 @@ public class LIBORMarketModelWithBrownianBridge extends LIBORMarketModel impleme
 			factorLoadings[factorLoadings.length - 1] = getRandomVariableForConstant(0.0); //no correlation to BB
 			return factorLoadings;
 		}
-		return new RandomVariableInterface[] {getRandomVariableForConstant(0.0)};
+		RandomVariableInterface[] factoLoadings = new RandomVariableInterface[getNumberOfFactors()];
+		for (int factorIndex = 0; factorIndex < factoLoadings.length - 1; factorIndex++) {
+			factoLoadings[factorIndex] = getRandomVariableForConstant(0.0);
+		}
+		//?
+		double time    = getTime(timeIndex);
+		int    previousLiborIndex = getLiborPeriodIndex(time);
+		if(previousLiborIndex<0) previousLiborIndex = (-previousLiborIndex-1)-1;		 //i
+		double previousLiborTime = getLiborPeriod(previousLiborIndex);   //T_i
+		double nextLiborTime     = getLiborPeriod(previousLiborIndex+1); //T_i+1
+		
+		factoLoadings[factoLoadings.length - 1] = getRandomVariableForConstant(1.0);
+		return factoLoadings;
 	}
 
 	@Override
@@ -82,15 +100,20 @@ public class LIBORMarketModelWithBrownianBridge extends LIBORMarketModel impleme
 		double processTime    = getTime(processTimeIndex);
 		int    liborIndex = getLiborPeriodIndex(processTime);
 		//processTimeIndex at LiborIndex
-		if(liborIndex>=0) return getProcessValue(evaluationTimeIndex, liborIndex);
+		if(liborIndex>=0)  {
+			if (liborIndex<evaluationTimeIndex) {
+				evaluationTimeIndex = liborIndex;
+			}
+			return getProcessValue(evaluationTimeIndex, liborIndex);
+		}
 		
 		//start interpolation
 		int previousLiborIndex = (-liborIndex-1)-1;						 //i
 		double previousLiborTime = getLiborPeriod(previousLiborIndex);   //T_i
 		double nextLiborTime     = getLiborPeriod(previousLiborIndex+1); //T_i+1
 		double periodLenght      = nextLiborTime - previousLiborIndex;
-		return getLIBOR(evaluationTimeIndex, previousLiborIndex).mult((nextLiborTime-processTime)/periodLenght) //L^i(t)*((T_i+1-t)/(T_i+1-T_i))
-				.add(getLIBOR(evaluationTimeIndex, previousLiborIndex + 1).mult((processTime-previousLiborTime)/periodLenght)) //L^i+1(t)*((t-T_i)/(T_i+1-T_i))
+		return getLIBOR(evaluationTimeIndex, getTimeIndex(previousLiborTime)).mult((nextLiborTime-processTime)/periodLenght) //L^i(t)*((T_i+1-t)/(T_i+1-T_i))
+				.add(getLIBOR(evaluationTimeIndex, getTimeIndex(nextLiborTime)).mult((processTime-previousLiborTime)/periodLenght)) //L^i+1(t)*((t-T_i)/(T_i+1-T_i))
 				.add(getBrownianBridge(processTimeIndex)/*.mult((nextLiborTime-processTime)/periodLenght)*/);
 	}
 
@@ -132,15 +155,21 @@ public class LIBORMarketModelWithBrownianBridge extends LIBORMarketModel impleme
 			return libor;
 	}
 
-	private RandomVariableInterface getBrownianBridge(int processTimeIndex) throws CalculationException {
+	public RandomVariableInterface getBrownianBridge(int processTimeIndex) throws CalculationException {
 		int brownianBridgeProcessIndex = getNumberOfLibors() - 1;
 		return getProcessValue(processTimeIndex, brownianBridgeProcessIndex);
 	}
 	
 	@Override
 	public int getNumberOfComponents() {
+		StackTraceElement stackTrace = Thread.currentThread().getStackTrace()[2];
+		if(stackTrace.getClassName().equals(this.getClass().getSuperclass().getCanonicalName())) {
+			//is LMM
+			return super.getNumberOfComponents();
+		}
 		return getNumberOfLibors() + 1;  //BB is last component;
 	}
+	
 	@Override
 	public int getNumberOfLibors() {
 		return getLiborPeriodDiscretization().getNumberOfTimeSteps();
