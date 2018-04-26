@@ -135,10 +135,10 @@ public class LIBORMarketModelWithBrownianBridge extends LIBORMarketModel impleme
 				//			return getLIBOR(getTime(timeIndex), periodStart, periodEnd).mult((getTime(timeIndex+1)-time)/timeStep).add(getLIBOR(getTime(timeIndex+1), periodStart, periodEnd).mult((time-getTime(timeIndex))/timeStep));
 			}
 
-			// If this is a model primitive then return it
+			// If this is a liborModel primitive then return it
 			if(periodStartIndex+1==periodEndIndex) return getLIBOR(timeIndex, periodStartIndex);
 
-			// The requested LIBOR is not a model primitive. We need to calculate it (slow!)
+			// The requested LIBOR is not a liborModel primitive. We need to calculate it (slow!)
 			RandomVariableInterface accrualAccount = null; //=randomVariableFactory.createRandomVariable(1.0);
 
 			// Calculate the value of the forward bond

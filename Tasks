@@ -1,0 +1,13 @@
+TODO:
+
+	LIBORModelWithBrownianBridge:
+	1.	build volatility model for bridge.
+	2.	build getNumeraire
+			works with Terminal?
+			do we need discount curve adjustment?
+	3.	build getLibor for period
+	4.  look for better refinement of BB (maybe change disc near to BB)
+	5.	maybe use better disc for BB than LMM and approx border points
+	
+	
+		

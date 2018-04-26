@@ -84,7 +84,7 @@ import net.finmath.time.businessdaycalendar.BusinessdayCalendarExcludingTARGETHo
 import net.finmath.time.daycount.DayCountConvention_ACT_365;
 
 /**
- * This class tests the LIBOR market model and products.
+ * This class tests the LIBOR market liborModel and products.
  * 
  * @author Christian Fries
  */
@@ -143,7 +143,7 @@ public class LIBORMarketModelTenorRefinmentTest {
 
 		final AnalyticModelInterface curveModel = getCalibratedCurve();
 
-		// Create the forward curve (initial value of the LIBOR market model)
+		// Create the forward curve (initial value of the LIBOR market liborModel)
 		final ForwardCurveInterface forwardCurve = curveModel.getForwardCurve("ForwardCurveFromDiscountCurve(discountCurve-EUR,6M)");
 
 		final DiscountCurveInterface discountCurve = curveModel.getDiscountCurve("discountCurve-EUR");
@@ -233,7 +233,7 @@ public class LIBORMarketModelTenorRefinmentTest {
 			LIBORVolatilityModel volatilityModel = new LIBORVolatilityModelPiecewiseConstant(timeDiscretization, liborPeriodDiscretization, optionMaturityDiscretization, timeToMaturityDiscretization, 0.40 / 100, true);
 			//			LIBORVolatilityModel volatilityModel = new LIBORVolatilityModelPiecewiseConstant(timeDiscretization, liborPeriodDiscretization, new TimeDiscretization(0.00, 30, 1.0), new TimeDiscretization(0.00, 40, 1.0), volatilityFineInitial);
 			LIBORCorrelationModel correlationModel = new LIBORCorrelationModelExponentialDecay(timeDiscretization, liborPeriodDiscretization, numberOfFactors, 0.05, false);
-			// Create a covariance model
+			// Create a covariance liborModel
 			AbstractLIBORCovarianceModelParametric covarianceModelParametric = new LIBORCovarianceModelExponentialForm5Param(timeDiscretization, liborPeriodDiscretization, numberOfFactors, new double[] { 0.20/100.0, 0.05/100.0, 0.10, 0.05/100.0, 0.10} );
 			covarianceModelParametric = new LIBORCovarianceModelFromVolatilityAndCorrelation(timeDiscretization, liborPeriodDiscretization, volatilityModel, correlationModel);
 
@@ -242,7 +242,7 @@ public class LIBORMarketModelTenorRefinmentTest {
 			Arrays.fill(tenorTimeScalings, 0.0);
 			TermStructureTenorTimeScalingInterface tenorTimeScalingModel = new TermStructureTenorTimeScalingPicewiseConstant(tenorTimeScalingDiscretization, tenorTimeScalings);
 
-			// Create blended local volatility model with fixed parameter 0.0 (that is "lognormal").
+			// Create blended local volatility liborModel with fixed parameter 0.0 (that is "lognormal").
 			AbstractLIBORCovarianceModelParametric covarianceModelBlended = new BlendedLocalVolatilityModel(covarianceModelParametric, 0.0, false);
 
 			TermStructureCovarianceModelParametric termStructureCovarianceModel;
@@ -254,7 +254,7 @@ public class LIBORMarketModelTenorRefinmentTest {
 				if(i>0) termStructureCovarianceModel = termStructureCovarianceModel.getCloneWithModifiedParameters(bestParameters);
 
 
-				// Set model properties
+				// Set liborModel properties
 				Map<String, Object> properties = new HashMap<String, Object>();
 
 				Double accuracy = new Double(1E-12);
@@ -326,7 +326,7 @@ public class LIBORMarketModelTenorRefinmentTest {
 
 		final AnalyticModelInterface curveModel = getCalibratedCurve();
 
-		// Create the forward curve (initial value of the LIBOR market model)
+		// Create the forward curve (initial value of the LIBOR market liborModel)
 		final ForwardCurveInterface forwardCurve = curveModel.getForwardCurve("ForwardCurveFromDiscountCurve(discountCurve-EUR,6M)");
 
 		final DiscountCurveInterface discountCurve = curveModel.getDiscountCurve("discountCurve-EUR");
@@ -416,7 +416,7 @@ public class LIBORMarketModelTenorRefinmentTest {
 			LIBORVolatilityModel volatilityModel = new LIBORVolatilityModelPiecewiseConstant(timeDiscretization, liborPeriodDiscretization, optionMaturityDiscretization, timeToMaturityDiscretization, 0.40 / 100, true);
 			//			LIBORVolatilityModel volatilityModel = new LIBORVolatilityModelPiecewiseConstant(timeDiscretization, liborPeriodDiscretization, new TimeDiscretization(0.00, 30, 1.0), new TimeDiscretization(0.00, 40, 1.0), volatilityFineInitial);
 			LIBORCorrelationModel correlationModel = new LIBORCorrelationModelExponentialDecay(timeDiscretization, liborPeriodDiscretization, numberOfFactors, 0.05, false);
-			// Create a covariance model
+			// Create a covariance liborModel
 			AbstractLIBORCovarianceModelParametric covarianceModelParametric = new LIBORCovarianceModelExponentialForm5Param(timeDiscretization, liborPeriodDiscretization, numberOfFactors, new double[] { 0.20/100.0, 0.05/100.0, 0.10, 0.05/100.0, 0.10} );
 			covarianceModelParametric = new LIBORCovarianceModelFromVolatilityAndCorrelation(timeDiscretization, liborPeriodDiscretization, volatilityModel, correlationModel);
 
@@ -425,7 +425,7 @@ public class LIBORMarketModelTenorRefinmentTest {
 			Arrays.fill(tenorTimeScalings, 0.0);
 			TermStructureTenorTimeScalingInterface tenorTimeScalingModel = new TermStructureTenorTimeScalingPicewiseConstant(tenorTimeScalingDiscretization, tenorTimeScalings);
 
-			// Create blended local volatility model with fixed parameter 0.0 (that is "lognormal").
+			// Create blended local volatility liborModel with fixed parameter 0.0 (that is "lognormal").
 			AbstractLIBORCovarianceModelParametric covarianceModelBlended = new BlendedLocalVolatilityModel(covarianceModelParametric, 0.0, false);
 
 			TermStructureCovarianceModelParametric termStructureCovarianceModel;
@@ -437,7 +437,7 @@ public class LIBORMarketModelTenorRefinmentTest {
 				if(i>0) termStructureCovarianceModel = termStructureCovarianceModel.getCloneWithModifiedParameters(bestParameters);
 
 
-				// Set model properties
+				// Set liborModel properties
 				Map<String, Object> properties = new HashMap<String, Object>();
 
 				Double accuracy = new Double(1E-12);
@@ -499,14 +499,14 @@ public class LIBORMarketModelTenorRefinmentTest {
 		if(test == 1) {
 			LIBORVolatilityModel volatilityModel = new LIBORVolatilityModelPiecewiseConstant(timeDiscretization, liborPeriodDiscretization, new TimeDiscretization(0.00, 30, 1.0), new TimeDiscretization(0.00, 40, 1.0), 0.40 / 100);
 			LIBORCorrelationModel correlationModel = new LIBORCorrelationModelExponentialDecay(timeDiscretization, liborPeriodDiscretization, numberOfFactors, 0.05, false);
-			// Create a covariance model
+			// Create a covariance liborModel
 			AbstractLIBORCovarianceModelParametric covarianceModelParametric = new LIBORCovarianceModelExponentialForm5Param(timeDiscretization, liborPeriodDiscretization, numberOfFactors, new double[] { 0.20/100.0, 0.05/100.0, 0.10, 0.05/100.0, 0.10} );
 			covarianceModelParametric = new LIBORCovarianceModelFromVolatilityAndCorrelation(timeDiscretization, liborPeriodDiscretization, volatilityModel, correlationModel);
 
-			// Create blended local volatility model with fixed parameter 0.0 (that is "lognormal").			
+			// Create blended local volatility liborModel with fixed parameter 0.0 (that is "lognormal").			
 			AbstractLIBORCovarianceModelParametric covarianceModelDisplaced = new DisplacedLocalVolatilityModel(covarianceModelParametric, 1.0/0.25, false /* isCalibrateable */);
 
-			// Set model properties
+			// Set liborModel properties
 			Map<String, Object> properties = new HashMap<String, Object>();
 
 			Double accuracy = new Double(1E-8);
@@ -578,7 +578,7 @@ public class LIBORMarketModelTenorRefinmentTest {
 			/*
 			 * We allow for 5 simultaneous calibration models.
 			 * Note: In the case of a Monte-Carlo calibration, the memory requirement is that of
-			 * one model with 5 times the number of paths. In the case of an analytic calibration
+			 * one liborModel with 5 times the number of paths. In the case of an analytic calibration
 			 * memory requirement is not the limiting factor.
 			 */
 			int numberOfThreads = 5;			
@@ -586,7 +586,7 @@ public class LIBORMarketModelTenorRefinmentTest {
 			{
 				private static final long serialVersionUID = 7213979669076698360L;
 
-				// Calculate model values for given parameters
+				// Calculate liborModel values for given parameters
 				@Override
 				public void setValues(double[] parameters, double[] values) throws SolverException {
 
@@ -600,7 +600,7 @@ public class LIBORMarketModelTenorRefinmentTest {
 							shortRateVolatility,
 							meanReversion);
 
-					// Create a LIBOR market model with the new covariance structure.
+					// Create a LIBOR market liborModel with the new covariance structure.
 					LIBORModelInterface model = new HullWhiteModel(
 							liborPeriodDiscretization, curveModel, forwardCurve, discountCurve, volatilityModel, null);
 					ProcessEulerScheme process = new ProcessEulerScheme(brownianMotion);
@@ -666,7 +666,7 @@ public class LIBORMarketModelTenorRefinmentTest {
 				}
 			}
 
-			// Get covariance model corresponding to the best parameter set.
+			// Get covariance liborModel corresponding to the best parameter set.
 			double[] bestParameters = optimizer.getBestFitParameters();
 
 			System.out.println("\nCalibrated parameters are:");
@@ -682,7 +682,7 @@ public class LIBORMarketModelTenorRefinmentTest {
 					shortRateVolatilityCalib,
 					meanReversionCalib);
 
-			// Create a LIBOR market model with the new covariance structure.
+			// Create a LIBOR market liborModel with the new covariance structure.
 			LIBORModelInterface modelCalibrated = new HullWhiteModel(
 					liborPeriodDiscretization, curveModel, forwardCurve, discountCurve, volatilityModelCalibrated, null);
 			ProcessEulerScheme process = new ProcessEulerScheme(brownianMotion);
@@ -714,7 +714,7 @@ public class LIBORMarketModelTenorRefinmentTest {
 			/*
 			 * We allow for 5 simultaneous calibration models.
 			 * Note: In the case of a Monte-Carlo calibration, the memory requirement is that of
-			 * one model with 5 times the number of paths. In the case of an analytic calibration
+			 * one liborModel with 5 times the number of paths. In the case of an analytic calibration
 			 * memory requirement is not the limiting factor.
 			 */
 			int numberOfThreads = 5;			
@@ -722,7 +722,7 @@ public class LIBORMarketModelTenorRefinmentTest {
 			{
 				private static final long serialVersionUID = 4823173102012628165L;
 
-				// Calculate model values for given parameters
+				// Calculate liborModel values for given parameters
 				@Override
 				public void setValues(double[] parameters, double[] values) throws SolverException {
 
@@ -736,7 +736,7 @@ public class LIBORMarketModelTenorRefinmentTest {
 							shortRateVolatility,
 							meanReversion);
 
-					// Create a LIBOR market model with the new covariance structure.
+					// Create a LIBOR market liborModel with the new covariance structure.
 					LIBORModelInterface model = new HullWhiteModel(
 							liborPeriodDiscretization, curveModel, forwardCurve, discountCurve, volatilityModel, null);
 					ProcessEulerScheme process = new ProcessEulerScheme(brownianMotion);
@@ -804,7 +804,7 @@ public class LIBORMarketModelTenorRefinmentTest {
 				}
 			}
 
-			// Get covariance model corresponding to the best parameter set.
+			// Get covariance liborModel corresponding to the best parameter set.
 			double[] bestParameters = optimizer.getBestFitParameters();
 
 			System.out.println("\nCalibrated parameters are:");
@@ -820,7 +820,7 @@ public class LIBORMarketModelTenorRefinmentTest {
 					shortRateVolatilityCalib,
 					meanReversionCalib);
 
-			// Create a LIBOR market model with the new covariance structure.
+			// Create a LIBOR market liborModel with the new covariance structure.
 			LIBORModelInterface modelCalibrated = new HullWhiteModel(
 					liborPeriodDiscretization, curveModel, forwardCurve, discountCurve, volatilityModelCalibrated, null);
 			ProcessEulerScheme process = new ProcessEulerScheme(brownianMotion);
@@ -828,7 +828,7 @@ public class LIBORMarketModelTenorRefinmentTest {
 		}
 
 
-		System.out.println("\nValuation on calibrated model:");
+		System.out.println("\nValuation on calibrated liborModel:");
 		double deviationSum			= 0.0;
 		double deviationSquaredSum	= 0.0;
 		for (int i = 0; i < calibrationItems.size(); i++) {

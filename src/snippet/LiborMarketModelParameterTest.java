@@ -15,7 +15,10 @@ import java.util.Map;
 
 import org.junit.Test;
 
+import montecarlo.interestrate.AbstractLIBORModelWithInterpolation;
 import montecarlo.interestrate.LIBORMarketModelWithBrownianBridge;
+import montecarlo.interestrate.LIBORModelWithBrownianBridge;
+import montecarlo.interestrate.LIBORModelWithInterpolationSimulation;
 import net.finmath.exception.CalculationException;
 import net.finmath.marketdata.model.curves.DiscountCurveFromForwardCurve;
 import net.finmath.marketdata.model.curves.ForwardCurve;
@@ -32,39 +35,42 @@ import net.finmath.montecarlo.process.ProcessEulerScheme;
 import net.finmath.time.TimeDiscretization;
 
 /**
- * This class tests the LIBOR market model and products.
+ * This class tests the LIBOR market liborModel and products.
  * 
  * @author Christian Fries
  */
 public class LiborMarketModelParameterTest {
 
 	private final int numberOfPaths		= 1000;
-	private final int numberOfFactors	= 6;
+	private final int numberOfFactors	= 1;
 
 	private LIBORModelMonteCarloSimulationInterface liborMarketModel;
-	private LIBORModelMonteCarloSimulationInterface liborMarketModelWithBrownianBridge; 
+	//private LIBORModelMonteCarloSimulationInterface liborMarketModelWithBrownianBridge; 
+	private LIBORModelWithInterpolationSimulation liborModelWithInterpolation;
 
-	private static DecimalFormat formatterNumeraire	= new DecimalFormat("###0.00", new DecimalFormatSymbols(Locale.ENGLISH));
+	private static DecimalFormat formatterNumeraire	= new DecimalFormat("###0.000", new DecimalFormatSymbols(Locale.ENGLISH));
 
 	public LiborMarketModelParameterTest() throws CalculationException {
 
-		// Create a libor market model
+		// Create a libor market liborModel
 		Locale.setDefault(Locale.ENGLISH);
 		liborMarketModel = createLIBORMarketModel(numberOfPaths, numberOfFactors, 0.1 /* Correlation */);
-		liborMarketModelWithBrownianBridge = createLIBORMarketModelWithBrownianBridge(numberOfPaths, numberOfFactors, 0.1);
+		liborModelWithInterpolation = createLIBORModelWithBrownianBridge(numberOfPaths, numberOfFactors, 0.1);
+		
+		//liborMarketModelWithBrownianBridge = createLIBORMarketModelWithBrownianBridge(numberOfPaths, numberOfFactors, 0.1);
 	}
 
-	public static LIBORModelMonteCarloSimulationInterface createLIBORMarketModel(
+	public static LIBORModelWithInterpolationSimulation createLIBORModelWithBrownianBridge(
 			int numberOfPaths, int numberOfFactors, double correlationDecayParam) throws CalculationException {
 
 		/*
 		 * Create the libor tenor structure and the initial values
 		 */
-		double liborPeriodLength	= 0.5;
+		double liborPeriodLength	= 1;
 		double liborRateTimeHorzion	= 40.0;
 		TimeDiscretization liborPeriodDiscretization = new TimeDiscretization(0.0, (int) (liborRateTimeHorzion / liborPeriodLength), liborPeriodLength);
 
-		// Create the forward curve (initial value of the LIBOR market model)
+		// Create the forward curve (initial value of the LIBOR market liborModel)
 		ForwardCurve forwardCurve = ForwardCurve.createForwardCurveFromForwards(
 				"forwardCurve"								/* name of the curve */,
 				new double[] {0.5 , 1.0 , 2.0 , 5.0 , 40.0}	/* fixings of the forward */,
@@ -87,7 +93,7 @@ public class LiborMarketModelParameterTest {
 		LIBORVolatilityModel volatilityModel = new LIBORVolatilityModelFourParameterExponentialForm(timeDiscretization, liborPeriodDiscretization, a, b, c, d, false);		
 
 		/*
-		 * Create a correlation model rho_{i,j} = exp(-a * abs(T_i-T_j))
+		 * Create a correlation liborModel rho_{i,j} = exp(-a * abs(T_i-T_j))
 		 */
 		LIBORCorrelationModelExponentialDecay correlationModel = new LIBORCorrelationModelExponentialDecay(
 				timeDiscretization, liborPeriodDiscretization, numberOfFactors,
@@ -95,7 +101,7 @@ public class LiborMarketModelParameterTest {
 
 
 		/*
-		 * Combine volatility model and correlation model to a covariance model
+		 * Combine volatility liborModel and correlation liborModel to a covariance liborModel
 		 */
 		LIBORCovarianceModelFromVolatilityAndCorrelation covarianceModel =
 				new LIBORCovarianceModelFromVolatilityAndCorrelation(timeDiscretization,
@@ -104,16 +110,91 @@ public class LiborMarketModelParameterTest {
 		// BlendedLocalVolatlityModel (future extension)
 		//		AbstractLIBORCovarianceModel covarianceModel2 = new BlendedLocalVolatlityModel(covarianceModel, 0.00, false);
 
-		// Set model properties
+		// Set liborModel properties
 		Map<String, String> properties = new HashMap<String, String>();
 
 		// Choose the simulation measure
 		properties.put("measure", LIBORMarketModel.Measure.SPOT.name());
 
-		// Choose log normal model
+		// Choose log normal liborModel
 		properties.put("stateSpace", LIBORMarketModel.StateSpace.LOGNORMAL.name());
 
-		// Empty array of calibration items - hence, model will use given covariance
+		// Empty array of calibration items - hence, liborModel will use given covariance
+		LIBORMarketModel.CalibrationItem[] calibrationItems = new LIBORMarketModel.CalibrationItem[0];
+
+		/*
+		 * Create corresponding LIBOR Market Model
+		 */
+		LIBORMarketModelInterface liborMarketModel = new LIBORMarketModel(liborPeriodDiscretization, forwardCurve, new DiscountCurveFromForwardCurve(forwardCurve), covarianceModel, calibrationItems, properties);
+
+		BrownianMotionInterface brownianMotion = new net.finmath.montecarlo.BrownianMotion(timeDiscretization, numberOfFactors, numberOfPaths, 3141 /* seed */);
+
+		ProcessEulerScheme process = new ProcessEulerScheme(brownianMotion, ProcessEulerScheme.Scheme.PREDICTOR_CORRECTOR);
+		
+		AbstractLIBORModelWithInterpolation model = new LIBORModelWithBrownianBridge(liborMarketModel, process, 435);
+		return new LIBORModelWithInterpolationSimulation(model, process);
+	}
+	
+	public static LIBORModelMonteCarloSimulationInterface createLIBORMarketModel(
+			int numberOfPaths, int numberOfFactors, double correlationDecayParam) throws CalculationException {
+
+		/*
+		 * Create the libor tenor structure and the initial values
+		 */
+		double liborPeriodLength	= 5;
+		double liborRateTimeHorzion	= 40.0;
+		TimeDiscretization liborPeriodDiscretization = new TimeDiscretization(0.0, (int) (liborRateTimeHorzion / liborPeriodLength), liborPeriodLength);
+
+		// Create the forward curve (initial value of the LIBOR market liborModel)
+		ForwardCurve forwardCurve = ForwardCurve.createForwardCurveFromForwards(
+				"forwardCurve"								/* name of the curve */,
+				new double[] {0.5 , 1.0 , 2.0 , 5.0 , 40.0}	/* fixings of the forward */,
+				new double[] {0.05, 0.05, 0.05, 0.05, 0.05}	/* forwards */,
+				liborPeriodLength							/* tenor / period length */
+				);
+
+		/*
+		 * Create a simulation time discretization
+		 */
+		double lastTime	= 40.0;
+		double dt		= 0.5;
+
+		TimeDiscretization timeDiscretization = new TimeDiscretization(0.0, (int) (lastTime / dt), dt);
+
+		/*
+		 * Create a volatility structure v[i][j] = sigma_j(t_i)
+		 */
+		double a = 0.05, b = 0.0, c = 0.25, d = 0.1;
+		LIBORVolatilityModel volatilityModel = new LIBORVolatilityModelFourParameterExponentialForm(timeDiscretization, liborPeriodDiscretization, a, b, c, d, false);		
+
+		/*
+		 * Create a correlation liborModel rho_{i,j} = exp(-a * abs(T_i-T_j))
+		 */
+		LIBORCorrelationModelExponentialDecay correlationModel = new LIBORCorrelationModelExponentialDecay(
+				timeDiscretization, liborPeriodDiscretization, numberOfFactors,
+				correlationDecayParam);
+
+
+		/*
+		 * Combine volatility liborModel and correlation liborModel to a covariance liborModel
+		 */
+		LIBORCovarianceModelFromVolatilityAndCorrelation covarianceModel =
+				new LIBORCovarianceModelFromVolatilityAndCorrelation(timeDiscretization,
+						liborPeriodDiscretization, volatilityModel, correlationModel);
+
+		// BlendedLocalVolatlityModel (future extension)
+		//		AbstractLIBORCovarianceModel covarianceModel2 = new BlendedLocalVolatlityModel(covarianceModel, 0.00, false);
+
+		// Set liborModel properties
+		Map<String, String> properties = new HashMap<String, String>();
+
+		// Choose the simulation measure
+		properties.put("measure", LIBORMarketModel.Measure.SPOT.name());
+
+		// Choose log normal liborModel
+		properties.put("stateSpace", LIBORMarketModel.StateSpace.LOGNORMAL.name());
+
+		// Empty array of calibration items - hence, liborModel will use given covariance
 		LIBORMarketModel.CalibrationItem[] calibrationItems = new LIBORMarketModel.CalibrationItem[0];
 
 		/*
@@ -138,7 +219,7 @@ public class LiborMarketModelParameterTest {
 		double liborRateTimeHorzion	= 40.0;
 		TimeDiscretization liborPeriodDiscretization = new TimeDiscretization(0.0, (int) (liborRateTimeHorzion / liborPeriodLength), liborPeriodLength);
 
-		// Create the forward curve (initial value of the LIBOR market model)
+		// Create the forward curve (initial value of the LIBOR market liborModel)
 		ForwardCurve forwardCurve = ForwardCurve.createForwardCurveFromForwards(
 				"forwardCurve"								/* name of the curve */,
 				new double[] {0.5 , 1.0 , 2.0 , 5.0 , 40.0}	/* fixings of the forward */,
@@ -150,7 +231,7 @@ public class LiborMarketModelParameterTest {
 		 * Create a simulation time discretization
 		 */
 		double lastTime	= 40.0;
-		double dt		= 0.5;
+		double dt		= 0.1;
 
 		TimeDiscretization timeDiscretization = new TimeDiscretization(0.0, (int) (lastTime / dt), dt);
 
@@ -161,7 +242,7 @@ public class LiborMarketModelParameterTest {
 		LIBORVolatilityModel volatilityModel = new LIBORVolatilityModelFourParameterExponentialForm(timeDiscretization, liborPeriodDiscretization, a, b, c, d, false);		
 
 		/*
-		 * Create a correlation model rho_{i,j} = exp(-a * abs(T_i-T_j))
+		 * Create a correlation liborModel rho_{i,j} = exp(-a * abs(T_i-T_j))
 		 */
 		LIBORCorrelationModelExponentialDecay correlationModel = new LIBORCorrelationModelExponentialDecay(
 				timeDiscretization, liborPeriodDiscretization, numberOfFactors,
@@ -169,7 +250,7 @@ public class LiborMarketModelParameterTest {
 
 
 		/*
-		 * Combine volatility model and correlation model to a covariance model
+		 * Combine volatility liborModel and correlation liborModel to a covariance liborModel
 		 */
 		LIBORCovarianceModelFromVolatilityAndCorrelation covarianceModel =
 				new LIBORCovarianceModelFromVolatilityAndCorrelation(timeDiscretization,
@@ -178,16 +259,16 @@ public class LiborMarketModelParameterTest {
 		// BlendedLocalVolatlityModel (future extension)
 		//		AbstractLIBORCovarianceModel covarianceModel2 = new BlendedLocalVolatlityModel(covarianceModel, 0.00, false);
 
-		// Set model properties
+		// Set liborModel properties
 		Map<String, String> properties = new HashMap<String, String>();
 
 		// Choose the simulation measure
 		properties.put("measure", LIBORMarketModel.Measure.SPOT.name());
 
-		// Choose log normal model
+		// Choose log normal liborModel
 		properties.put("stateSpace", LIBORMarketModel.StateSpace.NORMAL.name());
 
-		// Empty array of calibration items - hence, model will use given covariance
+		// Empty array of calibration items - hence, liborModel will use given covariance
 		LIBORMarketModel.CalibrationItem[] calibrationItems = new LIBORMarketModel.CalibrationItem[0];
 
 		/*
@@ -203,23 +284,29 @@ public class LiborMarketModelParameterTest {
 	}
 	
 	@Test
-	public void test() throws CalculationException {
-		
-		System.out.println(liborMarketModel.getNumberOfLibors());
-		System.out.println(((LIBORModelMonteCarloSimulation) liborMarketModel).getNumberOfComponents());
+	public void testLMM() throws CalculationException {
+		long timeStart = System.currentTimeMillis();
 		System.out.println("At time:\tNumeraire:\tLast Libor:\tLast Libor discounted:");
-		for (int timeIndex = 1; timeIndex < liborMarketModel.getTimeDiscretization().getNumberOfTimeSteps(); timeIndex++) {
+		for (int timeIndex = 1; timeIndex < liborMarketModel.getTimeDiscretization().getNumberOfTimeSteps() - 10; timeIndex++) {
 			double time = liborMarketModel.getTime(timeIndex);
 			
 			double numeraire = liborMarketModel.getNumeraire(time).getAverage();
-			double libor     = liborMarketModel.getLIBOR(timeIndex, liborMarketModel.getNumberOfLibors()-1).invert().getAverage();
+			double libor     = liborMarketModel.getLIBOR(timeIndex, liborMarketModel.getNumberOfLibors()-1).getAverage();
 			double liborDiscounted = liborMarketModel.getLIBOR(timeIndex, liborMarketModel.getNumberOfLibors()-1).div(liborMarketModel.getNumeraire(time)).getAverage();
 			System.out.print(time + "\t\t" + formatterNumeraire.format(numeraire) + "\t");
 			System.out.print(String.format("%9.3f", libor) + "\t");
 			System.out.println(String.format("%9.3f",liborDiscounted));
 		}
+		/*
 		System.out.println();
-		
+		for (int timeIndex = 0; timeIndex < liborMarketModel.getTimeDiscretization().getNumberOfTimeSteps() - 10; timeIndex++) 
+		{
+			System.out.println(timeIndex + "\t" + String.format("%9.5f",liborMarketModel.getLIBOR(0, liborMarketModel.getTime(timeIndex), liborMarketModel.getTime(timeIndex+1)).get(5)));
+		}
+		System.out.println();
+		System.out.println((System.currentTimeMillis() - timeStart));
+		*/	
+		/*
 		System.out.println(liborMarketModelWithBrownianBridge.getNumberOfLibors());
 		System.out.println(((LIBORModelMonteCarloSimulation) liborMarketModelWithBrownianBridge).getNumberOfComponents());
 		System.out.println("At time:\tNumeraire:\tLast Libor:\tLast Libor discounted:");
@@ -242,6 +329,37 @@ public class LiborMarketModelParameterTest {
 			System.out.println(String.format("%9.3f", libor) + "\t");
 			System.out.println(brownian);
 		}
-		
+		*/
 	}
+	
+	@Test
+	public void testLMMWithBB() throws CalculationException {
+		
+		long timeStart = System.currentTimeMillis();
+		System.out.println("At time:\tNumeraire:\tLast Libor:\tLast Libor discounted:");
+		for (int timeIndex = 1; timeIndex < liborModelWithInterpolation.getTimeDiscretization().getNumberOfTimeSteps() - 10; timeIndex++) {
+			double time = liborModelWithInterpolation.getTime(timeIndex);
+			
+			double numeraire = liborModelWithInterpolation.getNumeraire(time).getAverage();
+			double libor     = liborModelWithInterpolation.getLIBOR(timeIndex, liborModelWithInterpolation.getNumberOfLibors()-1).getAverage();
+			double liborDiscounted = liborModelWithInterpolation.getLIBOR(timeIndex, liborModelWithInterpolation.getNumberOfLibors()-1).div(liborModelWithInterpolation.getNumeraire(time)).getAverage();
+			System.out.print(time + "\t\t" + formatterNumeraire.format(numeraire) + "\t");
+			System.out.print(String.format("%9.3f", libor) + "\t");
+			System.out.println(String.format("%9.3f",liborDiscounted));
+		} // not working, because getLIBor does not work when timeIndex is after lastLibor
+		System.out.println();
+		/*
+		for (int timeIndex = 0; timeIndex < liborModelWithInterpolation.getTimeDiscretization().getNumberOfTimeSteps() - 10; timeIndex++) 
+		{
+			System.out.println(timeIndex + "\t" + String.format("%9.5f",liborModelWithInterpolation.getLIBORWithInterpolation(0, timeIndex).get(5)));
+			System.out.println(timeIndex + "\t" + String.format("%9.5f",liborModelWithInterpolation.getLIBOR(0, liborMarketModel.getTime(timeIndex), liborMarketModel.getTime(timeIndex+1)).get(5)));
+			
+		}
+		System.out.println(String.format("%9.5f",liborModelWithInterpolation.getLIBOR(0, 0.0, 5.0).get(5)));
+		System.out.println();
+		System.out.println();
+		System.out.println((System.currentTimeMillis() - timeStart));
+		*/
+	}
+	
 }
