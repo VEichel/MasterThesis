@@ -2,8 +2,11 @@ package montecarlo.interestrate;
 
 import java.util.Arrays;
 
+import montecarlo.interestrate.modelplugins.AbstractLiborWithInterpolationCovarianceModel;
+import montecarlo.interestrate.modelplugins.LiborWithInterpolationCovarianceModelFromArray;
 import net.finmath.exception.CalculationException;
 import net.finmath.montecarlo.BrownianBridge;
+import net.finmath.montecarlo.interestrate.LIBORMarketModel;
 import net.finmath.montecarlo.interestrate.LIBORModelInterface;
 import net.finmath.montecarlo.process.AbstractProcess;
 import net.finmath.stochastic.RandomVariableInterface;
@@ -14,12 +17,14 @@ public class LIBORModelWithBrownianBridge extends AbstractLIBORModelWithInterpol
 
 	enum InterpolationScheme { LINEAR, LOGLINEAR }
 	
-	InterpolationScheme interpolationScheme = InterpolationScheme.LINEAR;
+	InterpolationScheme interpolationScheme = InterpolationScheme.LOGLINEAR;
 	private BrownianBridge[]        brownianBridges;
+	private AbstractLiborWithInterpolationCovarianceModel covarianceModel;
 	
 	
-	public LIBORModelWithBrownianBridge(LIBORModelInterface liborModel, AbstractProcess liborProcess, int seed) {
+	public LIBORModelWithBrownianBridge(LIBORModelInterface liborModel, AbstractProcess liborProcess, int seed, double[] interpolationFactorArray) {
 		super(liborModel, liborProcess);
+		this.covarianceModel = new LiborWithInterpolationCovarianceModelFromArray(((LIBORMarketModel) liborModel).getCovarianceModel(), interpolationFactorArray);
 		this.brownianBridges = new BrownianBridge[liborModel.getNumberOfLibors() - 1]; //last one not interpolated
 		TimeDiscretizationInterface completeTimeDiscretization = liborModel.getTimeDiscretization();
 		TimeDiscretizationInterface liborPeriodDiscretization  = liborModel.getLiborPeriodDiscretization();
@@ -65,9 +70,11 @@ public class LIBORModelWithBrownianBridge extends AbstractLIBORModelWithInterpol
 
 	private RandomVariableInterface getBrownianBridge(int liborIndex, double time) {
 		RandomVariableInterface brownianBridgeValue = getRandomVariableForConstant(0.0);
-		int brownianIndex = brownianBridges[liborIndex].getTimeDiscretization().getTimeIndex(time);
+		TimeDiscretizationInterface brownianTimeDiscretizazion = brownianBridges[liborIndex].getTimeDiscretization();
+		int brownianIndex  = brownianTimeDiscretizazion.getTimeIndex(time);
+		int globalTimeIndex = brownianTimeDiscretizazion.getTimeIndex(getLiborPeriod(liborIndex)) + brownianIndex;
 		for (int timeIndex = 0; timeIndex < brownianIndex; timeIndex++) {
-			brownianBridgeValue = brownianBridges[liborIndex].getIncrement(timeIndex, 0).mult(0.002).add(brownianBridgeValue);
+			brownianBridgeValue = brownianBridges[liborIndex].getIncrement(timeIndex, 0).mult(0.0)/*.mult(covarianceModel.getFactorLoadingForInterpolation(globalTimeIndex)[0])*/.add(brownianBridgeValue);
 		}
 		return brownianBridgeValue;
 	}	

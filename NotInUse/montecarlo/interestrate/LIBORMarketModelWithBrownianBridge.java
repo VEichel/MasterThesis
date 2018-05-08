@@ -3,7 +3,7 @@ package montecarlo.interestrate;
 import java.util.Arrays;
 import java.util.Map;
 
-import montecarlo.interestrate.modelplugins.LIBORWithBrownianBridgeCovarianceModelInterface;
+import montecarlo.interestrate.modelplugins.LiborWithInterpolationCovarianceModelInterface;
 import net.finmath.exception.CalculationException;
 import net.finmath.marketdata.model.AnalyticModelInterface;
 import net.finmath.marketdata.model.curves.DiscountCurveInterface;
@@ -18,17 +18,110 @@ import net.finmath.montecarlo.model.AbstractModel;
 import net.finmath.stochastic.RandomVariableInterface;
 import net.finmath.time.TimeDiscretizationInterface;
 
-public class LIBORMarketModelWithBrownianBridge extends LIBORMarketModel implements TermStructureModelInterface {
+public class LIBORMarketModelWithBrownianBridge extends AbstractModel implements TermStructureModelInterface {
 
+	
+	private final TimeDiscretizationInterface liborPeriodDiscretizations;
+	
+	/**
+	 * 
+	 * @param liborPeriodDiscretization
+	 * @param forwardRateCurve
+	 * @param discountCurve
+	 * @param covarianceModel
+	 * @throws CalculationException
+	 */
 	public LIBORMarketModelWithBrownianBridge(TimeDiscretizationInterface liborPeriodDiscretization,
 			ForwardCurveInterface forwardRateCurve, DiscountCurveInterface discountCurve,
 			AbstractLIBORCovarianceModel covarianceModel) throws CalculationException {
-		super(liborPeriodDiscretization, forwardRateCurve, discountCurve, covarianceModel);
-		
+		this.liborPeriodDiscretizations = liborPeriodDiscretization;
+		//TODO
+	}
+
+
+	/**
+	 * @return Number of LIBORS + 1. The last component is the Brownian Bridge;
+	 */
+	@Override
+	public int getNumberOfComponents() {
+		return liborPeriodDiscretizations.getNumberOfTimeSteps() + 1;
+	}
+
+	public int getNumberOfLibors() {
+		return liborPeriodDiscretizations.getNumberOfTimeSteps();
+	}
+	
+	@Override
+	public RandomVariableInterface applyStateSpaceTransform(int componentIndex,
+			RandomVariableInterface randomVariable) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public RandomVariableInterface[] getInitialState() {
+		RandomVariableInterface[] initialStateRandomVariable = new RandomVariableInterface[getNumberOfComponents()];
+		for(int componentIndex=0; componentIndex<getNumberOfLibors(); componentIndex++) {
+			initialStateRandomVariable[componentIndex] = getRandomVariableForConstant(0.0);
+		}
+		initialStateRandomVariable[initialStateRandomVariable.length - 1] = getRandomVariableForConstant(0.0); //Brownian Bridge
+		return initialStateRandomVariable;
+	}
+
+	@Override
+	public RandomVariableInterface getNumeraire(double time) throws CalculationException {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public RandomVariableInterface[] getDrift(int timeIndex, RandomVariableInterface[] realizationAtTimeIndex,
+			RandomVariableInterface[] realizationPredictor) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public RandomVariableInterface[] getFactorLoading(int timeIndex, int componentIndex,
+			RandomVariableInterface[] realizationAtTimeIndex) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public RandomVariableInterface getLIBOR(double time, double periodStart, double periodEnd)
+			throws CalculationException {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public AnalyticModelInterface getAnalyticModel() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public DiscountCurveInterface getDiscountCurve() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public ForwardCurveInterface getForwardRateCurve() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public TermStructureModelInterface getCloneWithModifiedData(Map<String, Object> dataModified)
+			throws CalculationException {
+		// TODO Auto-generated method stub
+		return null;
 	}
 
 	
-	@Override
+	/*@Override
 	public RandomVariableInterface[] getInitialState() {
 		
 		RandomVariableInterface[] initialLiborStates = super.getInitialState();
@@ -117,6 +210,7 @@ public class LIBORMarketModelWithBrownianBridge extends LIBORMarketModel impleme
 				.add(getBrownianBridge(processTimeIndex)/*.mult((nextLiborTime-processTime)/periodLenght)*/);
 	}
 
+ 	/*
 	@Override
 	public RandomVariableInterface getLIBOR(double time, double periodStart, double periodEnd)
 			throws CalculationException {
@@ -174,6 +268,6 @@ public class LIBORMarketModelWithBrownianBridge extends LIBORMarketModel impleme
 	public int getNumberOfLibors() {
 		return getLiborPeriodDiscretization().getNumberOfTimeSteps();
 	}
-	
+	*/
 }
 

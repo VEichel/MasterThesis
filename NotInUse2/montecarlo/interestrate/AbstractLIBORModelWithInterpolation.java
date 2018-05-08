@@ -60,10 +60,14 @@ public abstract class AbstractLIBORModelWithInterpolation {
 			int upperLiborIndex = -liborIndex-1;
 			double upperLiborTime = getLiborPeriod(upperLiborIndex);
 			int lowerLiborIndex = upperLiborIndex-1;
+
 			if(lowerLiborIndex < 0) throw new IllegalArgumentException("Numeraire requested for time " + time + ". Unsupported");
 
 			RandomVariableInterface numeraire = (((getLIBOR(time, time, upperLiborTime).mult(upperLiborTime-time)).add(1.0)).invert())   // 1/(1+L(t,T_m(t)+1;t)*(T_m(t)+1-t))
-												.mult(getNumeraire(upperLiborTime));
+											.mult(getNumeraire(upperLiborTime));
+				
+			
+			
 			//System.out.println(" imp " + getNumeraire(upperLiborTime).getAverage());
 			//System.out.println(time + "     g: " + ((getLIBOR(time, time, upperLiborTime).mult(upperLiborTime-time)).add(1.0)).invert().getAverage());  // 1/(1+L(t,T_m(t)+1;t)*(T_m(t)+1-t)));
 			//System.out.println(numeraire.getAverage());
