@@ -32,6 +32,12 @@ public class LiborCovarianceModelWithInterpolation extends AbstractLiborCovarian
 		this.nonInterpolationModel = nonInterpolationModel;
 		this.interpolationVarianceScheme = interpolationVarianceScheme;
 		
+		//negative variance not allowed:
+		for (int index = 0; index < interpolationParameters.length; index++) {
+			if(interpolationParameters[index] < 0) interpolationParameters[index] = 0;
+		}
+		
+		
 		switch (interpolationVarianceScheme) {
 		
 		case PIECEWISECONSTANT:

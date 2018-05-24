@@ -42,8 +42,10 @@ import net.finmath.marketdata.model.curves.ForwardCurveFromDiscountCurve;
 import net.finmath.marketdata.model.curves.ForwardCurveInterface;
 import net.finmath.marketdata.products.AnalyticProductInterface;
 import net.finmath.marketdata.products.Swap;
+import net.finmath.montecarlo.BrownianMotion;
 import net.finmath.montecarlo.BrownianMotionInterface;
 import net.finmath.montecarlo.BrownianMotionView;
+import net.finmath.montecarlo.RandomVariableFactory;
 import net.finmath.montecarlo.interestrate.LIBORMarketModel;
 import net.finmath.montecarlo.interestrate.LIBORMarketModelInterface;
 import net.finmath.montecarlo.interestrate.LIBORMarketModel.CalibrationItem;
@@ -127,7 +129,7 @@ public class LIBORMarketModelCalibrationTest {
 		System.out.println("TEST ATM Swaption Calibration:");
 		System.out.println("------------------------------");
 		
-		final int numberOfPaths		= 100;
+		final int numberOfPaths		= 50;
 		final int numberOfFactors	= 1;
 
 		long millisCurvesStart = System.currentTimeMillis();
@@ -208,8 +210,8 @@ public class LIBORMarketModelCalibrationTest {
 		
 /*changed*/
 		double lastLiborTime = 40.0;
-		double liborDt		 = 5.0;
-		
+		double liborDt		 = 10.0;
+
 		final TimeDiscretizationInterface liborPeriodDiscretization = new TimeDiscretization(0.0, (int) (lastLiborTime / liborDt), liborDt);
 /*changed end*/
 		
@@ -224,8 +226,8 @@ public class LIBORMarketModelCalibrationTest {
 		LIBORVolatilityModel volatilityModel = new LIBORVolatilityModelPiecewiseConstant(timeDiscretization, liborPeriodDiscretization, new TimeDiscretization(0.00, 1.0, 2.0, 5.0, 10.0, 20.0, 30.0, 40.0), new TimeDiscretization(0.00, 1.0, 2.0, 5.0, 10.0, 20.0, 30.0, 40.0), 0.50 / 100);
 		LIBORCorrelationModel correlationModel = new LIBORCorrelationModelExponentialDecay(timeDiscretization, liborPeriodDiscretization, numberOfFactors, 0.05, false);
 		// Create a covariance model
-		//AbstractLIBORCovarianceModelParametric covarianceModelParametric = new LIBORCovarianceModelExponentialForm5Param(timeDiscretization, liborPeriodDiscretization, numberOfFactors, new double[] { 0.20/100.0, 0.05/100.0, 0.10, 0.05/100.0, 0.10} );
-		AbstractLIBORCovarianceModelParametric covarianceModelParametric = new LIBORCovarianceModelFromVolatilityAndCorrelation(timeDiscretization, liborPeriodDiscretization, volatilityModel, correlationModel);
+		AbstractLIBORCovarianceModelParametric covarianceModelParametric = new LIBORCovarianceModelExponentialForm5Param(timeDiscretization, liborPeriodDiscretization, numberOfFactors, new double[] { 0.20/100.0, 0.05/100.0, 0.10, 0.05/100.0, 0.10} );
+		//AbstractLIBORCovarianceModelParametric covarianceModelParametric = new LIBORCovarianceModelFromVolatilityAndCorrelation(timeDiscretization, liborPeriodDiscretization, volatilityModel, correlationModel);
 
 		// Create blended local volatility model with fixed parameter (0=lognormal, > 1 = almost a normal model).			
 		AbstractLIBORCovarianceModelParametric covarianceModelDisplaced = new DisplacedLocalVolatilityModel(covarianceModelParametric, 1.0/0.25, false /* isCalibrateable */);
@@ -240,9 +242,9 @@ public class LIBORMarketModelCalibrationTest {
 		properties.put("stateSpace", LIBORMarketModel.StateSpace.NORMAL.name());
 
 		// Set calibration properties (should use our brownianMotion for calibration - needed to have to right correlation).		
-		Double accuracy = 1E-6;	// Lower accuracy to reduce runtime of the unit test
+		Double accuracy = 1E-5;	// Lower accuracy to reduce runtime of the unit test
 		int maxIterations = 100;
-		int numberOfThreads = 8;
+		int numberOfThreads = 4;
 		OptimizerFactoryInterface optimizerFactory = new OptimizerFactoryLevenbergMarquardt(maxIterations, accuracy, numberOfThreads);
 
 		double[] parameterStandardDeviation = new double[covarianceModelParametric.getParameter().length];
@@ -322,23 +324,29 @@ public class LIBORMarketModelCalibrationTest {
 		long millisCalibrationStartBB = System.currentTimeMillis();
 		
 		
-		double[] interpolationParameters = new double[timeDiscretization.getNumberOfTimeSteps()];
-		Arrays.fill(interpolationParameters, 0.0);
+		double[] interpolationParameters = new double[liborPeriodDiscretization.getNumberOfTimeSteps()];
+		Arrays.fill(interpolationParameters, 0.01);
 		AbstractLiborCovarianceModelWithInterpolation covarianceModelWithInterpolation = new LiborCovarianceModelWithInterpolation(covarianceModelDisplaced,
-				interpolationParameters, InterpolationVarianceScheme.FINEST);
+				interpolationParameters, InterpolationVarianceScheme.PIECEWISECONSTANT);
 	
+		BrownianMotionInterface interpolationDriver = new BrownianMotion(timeDiscretization, 0, numberOfPaths, /*seed*/ 18273625);
+		
+		
+		 
 		LIBORMarketModelInterface liborMarketModelWithBB = new LiborMarketModelWithBridgeInterpolation(liborPeriodDiscretization,
 				curveModel,
 				forwardCurve, new DiscountCurveFromForwardCurve(forwardCurve),
+				new RandomVariableFactory(),
 				covarianceModelWithInterpolation,
-				calibrationItemsLMM,
-				properties);
+			    calibrationItemsLMM,
+				properties,
+				interpolationDriver);
 		
 		
 		long millisCalibrationEndBB = System.currentTimeMillis();
 
 		System.out.println("\nCalibrated parameters are:");
-		double[] paramBB = ((AbstractLIBORCovarianceModelParametric)((LIBORMarketModel) liborMarketModelWithBB).getCovarianceModel()).getParameter();
+		double[] paramBB = ((AbstractLIBORCovarianceModelParametric)((LiborMarketModelWithBridgeInterpolation) liborMarketModelWithBB).getCovarianceModel()).getParameter();
 		for (double p : paramBB) System.out.println(p);
 
 		ProcessEulerScheme processBB = new ProcessEulerScheme(brownianMotion);
