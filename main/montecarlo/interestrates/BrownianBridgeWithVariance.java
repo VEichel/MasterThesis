@@ -1,4 +1,4 @@
-package montecarlo.interestrate;
+package montecarlo.interestrates;
 
 
 import java.io.IOException;
@@ -26,6 +26,8 @@ public class BrownianBridgeWithVariance implements BrownianMotionInterface {
 	private transient RandomVariableInterface[][]	    brownianIncrements;
 	private transient Object							brownianIncrementsLazyInitLock = new Object();
 
+	private final RandomVariableInterface[] variances;
+
 	/**
 	 * Construct a Brownian bridge, bridging from a given start to a given end.
 	 * 
@@ -35,7 +37,8 @@ public class BrownianBridgeWithVariance implements BrownianMotionInterface {
 	 * @param start Start value of the Brownian bridge.
 	 * @param end End value of the Brownian bridge.
 	 */
-	public BrownianBridgeWithVariance(TimeDiscretizationInterface timeDiscretization, int numberOfPaths, int seed, RandomVariableInterface[] start, RandomVariableInterface[] end) {
+	public BrownianBridgeWithVariance(TimeDiscretizationInterface timeDiscretization, int numberOfPaths, int seed, RandomVariableInterface[] start, RandomVariableInterface[] end,
+			RandomVariableInterface[] variances) {
 		super();
 		this.timeDiscretization = timeDiscretization;
 		this.numberOfFactors = start.length;
@@ -43,6 +46,8 @@ public class BrownianBridgeWithVariance implements BrownianMotionInterface {
 		this.seed = seed;
 		this.start = start;
 		this.end = end;
+		
+		this.variances = variances;
 	}
 
 	/**
@@ -54,8 +59,9 @@ public class BrownianBridgeWithVariance implements BrownianMotionInterface {
 	 * @param start Start value of the Brownian bridge.
 	 * @param end End value of the Brownian bridge.
 	 */
-	public BrownianBridgeWithVariance(TimeDiscretizationInterface timeDiscretization, int numberOfPaths, int seed, RandomVariableInterface start, RandomVariableInterface end) {
-		this(timeDiscretization, numberOfPaths, seed, new RandomVariableInterface[] {start}, new RandomVariableInterface[] {end});
+	public BrownianBridgeWithVariance(TimeDiscretizationInterface timeDiscretization, int numberOfPaths, int seed, RandomVariableInterface start, RandomVariableInterface end,
+			RandomVariableInterface[] variances) {
+		this(timeDiscretization, numberOfPaths, seed, new RandomVariableInterface[] {start}, new RandomVariableInterface[] {end}, variances);
 	}
 
 	/* (non-Javadoc)
@@ -98,7 +104,8 @@ public class BrownianBridgeWithVariance implements BrownianMotionInterface {
 				double alpha		= (nextTime-currentTime)/(endTime-currentTime);
 
 				// Calculate the next point using the "scheme" of the Brownian bridge
-				RandomVariableInterface nextRealization = brownianBridge.mult(1.0-alpha).add(endOfFactor.mult(alpha)).add(generator.getBrownianIncrement(timeIndex, factor).mult(0.00).mult(Math.sqrt(1-alpha)));
+				RandomVariableInterface nextRealization = brownianBridge.mult(1.0-alpha).add(endOfFactor.mult(alpha)).add(generator.getBrownianIncrement(timeIndex, factor)
+						.mult(variances[timeIndex]).mult(Math.sqrt(1-alpha)));
 				
 				// Store the increment
 				brownianIncrements[timeIndex][factor] = nextRealization.sub(brownianBridge);
@@ -143,7 +150,7 @@ public class BrownianBridgeWithVariance implements BrownianMotionInterface {
 	 */
 	@Override
 	public BrownianMotionInterface getCloneWithModifiedSeed(int seed) {
-		return new BrownianBridgeWithVariance(timeDiscretization, numberOfPaths, seed, start, end);
+		return new BrownianBridgeWithVariance(timeDiscretization, numberOfPaths, seed, start, end, variances);
 	}
 
 	/* (non-Javadoc)
@@ -151,7 +158,7 @@ public class BrownianBridgeWithVariance implements BrownianMotionInterface {
 	 */
 	@Override
 	public BrownianMotionInterface getCloneWithModifiedTimeDiscretization(TimeDiscretizationInterface newTimeDiscretization) {
-		return new BrownianBridgeWithVariance(newTimeDiscretization, getNumberOfFactors(), seed, start, end);
+		return new BrownianBridgeWithVariance(newTimeDiscretization, getNumberOfFactors(), seed, start, end, variances);
 	}
 
 	@Override
