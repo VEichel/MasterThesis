@@ -591,7 +591,6 @@ public class LiborMarketModelWithBridgeInterpolation extends AbstractModel imple
 		}
 	
 		return libor;
-		
 	}
 	
 	/**
