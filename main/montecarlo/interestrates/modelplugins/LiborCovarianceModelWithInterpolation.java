@@ -161,7 +161,7 @@ public class LiborCovarianceModelWithInterpolation extends AbstractLiborCovarian
 
 	@Override
 	public Object clone() {
-		return new LiborCovarianceModelWithInterpolation(nonInterpolationModel, interpolationParameters);
+		return new LiborCovarianceModelWithInterpolation(nonInterpolationModel, interpolationParameters, interpolationVarianceScheme);
 	}
 
 	@Override

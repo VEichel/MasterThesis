@@ -86,6 +86,21 @@ public class LIBORMarketModelCalibrationTest {
 	private static DecimalFormat formatterParam		= new DecimalFormat(" #0.000;-#0.000", new DecimalFormatSymbols(Locale.ENGLISH));
 	private static DecimalFormat formatterDeviation	= new DecimalFormat(" 0.00000E00;-0.00000E00", new DecimalFormatSymbols(Locale.ENGLISH));
 
+	double lastTime	= 40.0;
+	double dt		= 0.25;
+	TimeDiscretization timeDiscretization = new TimeDiscretization(0.0, (int) (lastTime / dt), dt);
+	
+/*changed*/
+	double lastLiborTime = 40.0;
+	double liborDt		 = 0.25;
+
+	final TimeDiscretizationInterface liborPeriodDiscretization = new TimeDiscretization(0.0, (int) (lastLiborTime / liborDt), liborDt);
+/*changed end*/
+	
+	Double accuracy = 1E-7;	// Lower accuracy to reduce runtime of the unit test
+	int maxIterations = 500;
+	int numberOfThreads = 4;
+	
 	private CalibrationItem createCalibrationItem(double weight, double exerciseDate, double swapPeriodLength, int numberOfPeriods, double moneyness, double targetVolatility, String targetVolatilityType, ForwardCurveInterface forwardCurve, DiscountCurveInterface discountCurve) throws CalculationException {
 
 		double[]	fixingDates			= new double[numberOfPeriods];
@@ -129,7 +144,7 @@ public class LIBORMarketModelCalibrationTest {
 		System.out.println("TEST ATM Swaption Calibration:");
 		System.out.println("------------------------------");
 		
-		final int numberOfPaths		= 50;
+		final int numberOfPaths		= 1000;
 		final int numberOfFactors	= 1;
 
 		long millisCurvesStart = System.currentTimeMillis();
@@ -199,21 +214,6 @@ public class LIBORMarketModelCalibrationTest {
 			calibrationItems.add(createCalibrationItem(weight, exercise, swapPeriodLength, numberOfPeriods, moneyness, targetVolatility, targetVolatilityType, forwardCurve, discountCurve));
 			calibrationItemNames.add(atmExpiries[i]+"\t"+atmTenors[i]);
 		}
-
-		/*
-		 * Create a simulation time discretization
-		 */
-		// If simulation time is below libor time, exceptions will be hard to track.
-		double lastTime	= 40.0;
-		double dt		= 0.25;
-		TimeDiscretization timeDiscretization = new TimeDiscretization(0.0, (int) (lastTime / dt), dt);
-		
-/*changed*/
-		double lastLiborTime = 40.0;
-		double liborDt		 = 10.0;
-
-		final TimeDiscretizationInterface liborPeriodDiscretization = new TimeDiscretization(0.0, (int) (lastLiborTime / liborDt), liborDt);
-/*changed end*/
 		
 		
 		/*
@@ -242,9 +242,7 @@ public class LIBORMarketModelCalibrationTest {
 		properties.put("stateSpace", LIBORMarketModel.StateSpace.NORMAL.name());
 
 		// Set calibration properties (should use our brownianMotion for calibration - needed to have to right correlation).		
-		Double accuracy = 1E-5;	// Lower accuracy to reduce runtime of the unit test
-		int maxIterations = 100;
-		int numberOfThreads = 4;
+		
 		OptimizerFactoryInterface optimizerFactory = new OptimizerFactoryLevenbergMarquardt(maxIterations, accuracy, numberOfThreads);
 
 		double[] parameterStandardDeviation = new double[covarianceModelParametric.getParameter().length];
@@ -289,6 +287,7 @@ public class LIBORMarketModelCalibrationTest {
 		LIBORModelMonteCarloSimulationInterface simulationCalibrated = new LIBORModelMonteCarloSimulation(liborMarketModelCalibrated, process);
 
 		System.out.println("\nValuation on calibrated model:");
+		System.out.println("Item Name \t Model \t Target \t Deviation");
 		double deviationSum			= 0.0;
 		double deviationSquaredSum	= 0.0;
 		for (int i = 0; i < calibrationItems.size(); i++) {
@@ -299,7 +298,7 @@ public class LIBORMarketModelCalibrationTest {
 				double error = valueModel-valueTarget;
 				deviationSum += error;
 				deviationSquaredSum += error*error;
-				System.out.println(calibrationItemNames.get(i) + "\t" + "Model: " + formatterValue.format(valueModel) + "\t Target: " + formatterValue.format(valueTarget) + "\t Deviation: " + formatterDeviation.format(valueModel-valueTarget));// + "\t" + calibrationProduct.toString());
+				System.out.println(calibrationItemNames.get(i) + "\t" + formatterValue.format(valueModel) + "\t" + formatterValue.format(valueTarget) + "\t" + formatterDeviation.format(valueModel-valueTarget));// + "\t" + calibrationProduct.toString());
 			}
 			catch(Exception e) {
 			}
@@ -315,7 +314,6 @@ public class LIBORMarketModelCalibrationTest {
 
 		//Assert.assertTrue(Math.abs(averageDeviation) < 2E-4);
 		
-		
 		System.out.println();
 		System.out.println("Model With Brownian Bridge Interpolation");
 		System.out.println("----------------------------------------");
@@ -324,13 +322,12 @@ public class LIBORMarketModelCalibrationTest {
 		long millisCalibrationStartBB = System.currentTimeMillis();
 		
 		
-		double[] interpolationParameters = new double[liborPeriodDiscretization.getNumberOfTimeSteps()];
-		Arrays.fill(interpolationParameters, 0.01);
+		double[] interpolationParameters = new double[timeDiscretization.getNumberOfTimeSteps()];
+		Arrays.fill(interpolationParameters, 0.0);
 		AbstractLiborCovarianceModelWithInterpolation covarianceModelWithInterpolation = new LiborCovarianceModelWithInterpolation(covarianceModelDisplaced,
-				interpolationParameters, InterpolationVarianceScheme.PIECEWISECONSTANT);
+				interpolationParameters, InterpolationVarianceScheme.FINEST);
 	
-		BrownianMotionInterface interpolationDriver = new BrownianMotion(timeDiscretization, 0, numberOfPaths, /*seed*/ 18273625);
-		
+		BrownianMotionInterface interpolationDriver = new BrownianMotion(timeDiscretization, 1, numberOfPaths, /*seed*/ 18273625);
 		
 		 
 		LIBORMarketModelInterface liborMarketModelWithBB = new LiborMarketModelWithBridgeInterpolation(liborPeriodDiscretization,
@@ -353,6 +350,7 @@ public class LIBORMarketModelCalibrationTest {
 		LIBORModelMonteCarloSimulationInterface simulationCalibratedBB = new LIBORModelMonteCarloSimulation(liborMarketModelWithBB, processBB);
 
 		System.out.println("\nValuation on calibrated model:");
+		System.out.println("Item Name \t Model\t Target\t Deviation");
 		double deviationSumBB			= 0.0;
 		double deviationSquaredSumBB	= 0.0;
 		for (int i = 0; i < calibrationItems.size(); i++) {
@@ -363,7 +361,7 @@ public class LIBORMarketModelCalibrationTest {
 				double error = valueModel-valueTarget;
 				deviationSumBB += error;
 				deviationSquaredSumBB += error*error;
-				System.out.println(calibrationItemNames.get(i) + "\t" + "Model: " + formatterValue.format(valueModel) + "\t Target: " + formatterValue.format(valueTarget) + "\t Deviation: " + formatterDeviation.format(valueModel-valueTarget));// + "\t" + calibrationProduct.toString());
+				System.out.println(calibrationItemNames.get(i) + "\t" + formatterValue.format(valueModel) + "\t" + formatterValue.format(valueTarget) + "\t" + formatterDeviation.format(valueModel-valueTarget));// + "\t" + calibrationProduct.toString());
 			}
 			catch(Exception e) {
 			}
