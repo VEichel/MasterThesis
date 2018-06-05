@@ -118,11 +118,14 @@ public class LiborMarketModelWithBridgeInterpolation extends AbstractModel imple
 		this.randomVariableFactory	= randomVariableFactory;
 		this.covarianceModel		= covarianceModel;
 
+		this.interpolationDriver = interpolationDriver;
+		
 		double[] times = new double[liborPeriodDiscretization.getNumberOfTimeSteps()];
 		for(int i=0; i<times.length; i++) times[i] = liborPeriodDiscretization.getTime(i);
 
 		// Perform calibration, if data is given
 		if(calibrationItems != null && calibrationItems.length > 0) {
+			
 			AbstractLiborCovarianceModelWithInterpolation covarianceModelParametric = null;
 			try {
 				covarianceModelParametric = (AbstractLiborCovarianceModelWithInterpolation)covarianceModel;
@@ -140,14 +143,11 @@ public class LiborMarketModelWithBridgeInterpolation extends AbstractModel imple
 				calibrationTargetValues[i]	= calibrationItems[i].calibrationTargetValue;
 				calibrationWeights[i]		= calibrationItems[i].calibrationWeight;
 			}
-
 			this.covarianceModel    = (AbstractLiborCovarianceModelWithInterpolation) covarianceModelParametric.getCloneCalibrated(this, calibrationProducts, calibrationTargetValues, calibrationWeights, calibrationParameters);
 		}
 
 		numeraires = new ConcurrentHashMap<Integer, RandomVariableInterface>();
-	
 		//if(interpolationDriver.getTimeDiscretization().equals(covarianceModel.getTimeDiscretization()) ) throw new IllegalArgumentException("Time discretization for the Brownian Motion used in the Bridge does not match the one in Covariance Model!");
-		this.interpolationDriver = interpolationDriver;
 	}
 
 	
@@ -613,7 +613,7 @@ public class LiborMarketModelWithBridgeInterpolation extends AbstractModel imple
 			TimeDiscretizationInterface bridgeDiscretization    = new TimeDiscretization(
 					Arrays.copyOfRange(completeTimeDiscretization.getAsDoubleArray(), getTimeIndex(liborPeriodStart), getTimeIndex(liborPeriodEnd) + 1));
 			
-			BrownianBridgeWithVariance brownianBridge = new BrownianBridgeWithVariance(bridgeDiscretization, interpolationDriver, covarianceModel.getVarianceForInterpolationPeriod(liborIndex));
+			BrownianBridgeWithVariance brownianBridge = new BrownianBridgeWithVariance(bridgeDiscretization, interpolationDriver, covarianceModel.getVarianceForInterpolationPeriod(liborIndex), randomVariableFactory);
 					//new BrownianBridgeWithVariance(bridgeDiscretization, getProcess().getNumberOfPaths(), getRandomVariableForConstant(0.0), getRandomVariableForConstant(0.0),
 					//covarianceModel.getVarianceForInterpolationPeriod(liborIndex));
 			
@@ -735,7 +735,9 @@ public class LiborMarketModelWithBridgeInterpolation extends AbstractModel imple
 			Map<String, Object> properties = new HashMap<String, Object>();
 			properties.put("measure",		measure.name());
 			properties.put("stateSpace",	stateSpace.name());
-			return new LiborMarketModelWithBridgeInterpolation(getLiborPeriodDiscretization(), getAnalyticModel(), getForwardRateCurve(), getDiscountCurve(), randomVariableFactory, covarianceModel, new CalibrationItem[0], properties, interpolationDriver);
+			return new LiborMarketModelWithBridgeInterpolation(getLiborPeriodDiscretization(), getAnalyticModel(),
+					getForwardRateCurve(), getDiscountCurve(), randomVariableFactory, covarianceModel,
+					new CalibrationItem[0], properties, interpolationDriver);
 		} catch (CalculationException e) {
 			return null;
 		}
@@ -794,7 +796,7 @@ public class LiborMarketModelWithBridgeInterpolation extends AbstractModel imple
 
 	@Override
 	public String toString() {
-		return "LIBORMarketModel [liborPeriodDiscretization="
+		return "LIBORMarketModelWithBridgeInterpolation [liborPeriodDiscretization="
 				+ liborPeriodDiscretization + ", forwardCurveName="
 				+ forwardCurveName + ", curveModel=" + curveModel
 				+ ", forwardRateCurve=" + forwardRateCurve + ", discountCurve="

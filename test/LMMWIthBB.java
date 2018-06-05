@@ -7,8 +7,10 @@ import montecarlo.interestrates.modelplugins.LiborCovarianceModelWithInterpolati
 import net.finmath.exception.CalculationException;
 import net.finmath.marketdata.model.curves.DiscountCurveFromForwardCurve;
 import net.finmath.marketdata.model.curves.ForwardCurve;
+import net.finmath.montecarlo.BrownianMotion;
 import net.finmath.montecarlo.BrownianMotionInterface;
 import net.finmath.montecarlo.RandomVariable;
+import net.finmath.montecarlo.RandomVariableFactory;
 import net.finmath.montecarlo.interestrate.LIBORMarketModel;
 import net.finmath.montecarlo.interestrate.LIBORMarketModelInterface;
 import net.finmath.montecarlo.interestrate.LIBORModelMonteCarloSimulation;
@@ -16,6 +18,7 @@ import net.finmath.montecarlo.interestrate.modelplugins.LIBORCorrelationModelExp
 import net.finmath.montecarlo.interestrate.modelplugins.LIBORCovarianceModelFromVolatilityAndCorrelation;
 import net.finmath.montecarlo.interestrate.modelplugins.LIBORVolatilityModel;
 import net.finmath.montecarlo.interestrate.modelplugins.LIBORVolatilityModelFourParameterExponentialForm;
+import net.finmath.montecarlo.interestrate.products.SimpleSwap;
 import net.finmath.montecarlo.process.ProcessEulerScheme;
 import net.finmath.stochastic.RandomVariableInterface;
 import net.finmath.time.TimeDiscretization;
@@ -32,7 +35,7 @@ public class LMMWIthBB {
 		LIBORModelMonteCarloSimulation LMMBB = createLIBORMarketModelWithBB(1000, 3, 0.1);
 		LIBORModelMonteCarloSimulation LMM = createLIBORMarketModel(1000, 3, 0.1);
 		
-		/*
+		
 		//Test 1:
 
 		for (int timeIndex = 20; timeIndex < 40; timeIndex++) {
@@ -40,20 +43,32 @@ public class LMMWIthBB {
 					LMM.getLIBOR(0.0, LMM.getTime(timeIndex), 20.0).get(15) + "\t" +
 					LMMBB.getLIBOR(0.0, LMM.getTime(timeIndex), 20.0).get(15));
 		}
-		*/
-		/*
+		
+		
 		System.out.println();
 		System.out.println("Test 2");
 		//Test 2:
 		for (int timeIndex = 0; timeIndex < LMMBB.getTimeDiscretization().getNumberOfTimes(); timeIndex++) {
 			double time = LMMBB.getTime(timeIndex);
 			System.out.println( LMMBB.getNumeraire(time).get(15) + "\t" + LMM.getNumeraire(time).get(15));
-		}*/
+		}
 		System.out.println();
 		System.out.println("Test 3");
 		for (int timeIndex = 0; timeIndex < LMMBB.getTimeDiscretization().getNumberOfTimes(); timeIndex++) {
 			double time = LMMBB.getTime(timeIndex);
 			System.out.println( LMMBB.getNumeraire(time).get(15) + "\t" + LMM.getNumeraire(time).get(15));
+		}
+		System.out.println();
+		
+		for (int timeIndex = 0; timeIndex < LMM.getTimeDiscretization().getNumberOfTimeSteps(); timeIndex++) {
+			
+			double[] fixingDates = {LMM.getTime(timeIndex)};
+			double[] paymentDates = {LMM.getTime(timeIndex + 1)};
+			double[] swaprates    = {0.01};
+			
+			SimpleSwap swap = new SimpleSwap(fixingDates, paymentDates, swaprates);
+			System.out.println(swap.getValue(LMM) + "\t" + swap.getValue(LMMBB));
+			
 		}
 		
 	}
@@ -115,7 +130,7 @@ public class LMMWIthBB {
 		properties.put("stateSpace", LIBORMarketModel.StateSpace.LOGNORMAL.name());
 
 		// Empty array of calibration items - hence, liborModel will use given covariance
-		LiborMarketModelWithBridgeInterpolation.CalibrationItem[] calibrationItems = new LiborMarketModelWithBridgeInterpolation.CalibrationItem[0];
+		LIBORMarketModel.CalibrationItem[] calibrationItems = new LIBORMarketModel.CalibrationItem[0];
 
 		/* For piecewise constant model
 		double[] interpolationParameters = new double[liborPeriodDiscretization.getNumberOfTimeSteps()];
@@ -124,7 +139,7 @@ public class LMMWIthBB {
 		}
 		*/
 		double[] interpolationParameters = new double[1];
-		interpolationParameters[0] = 0.02;
+		interpolationParameters[0] = 0.05;
 		 
 		
 		AbstractLiborCovarianceModelWithInterpolation covarianceModel = new LiborCovarianceModelWithInterpolation(liborCovarianceModel, interpolationParameters);
@@ -133,7 +148,9 @@ public class LMMWIthBB {
 		/*
 		 * Create corresponding LIBOR Market Model
 		 */
-		LIBORMarketModelInterface liborMarketModel = new LiborMarketModelWithBridgeInterpolation(liborPeriodDiscretization, null, forwardCurve, new DiscountCurveFromForwardCurve(forwardCurve), covarianceModel, calibrationItems, properties);
+		BrownianMotionInterface interpolationDriver = new BrownianMotion(timeDiscretization, 1, numberOfPaths, 412421);
+		
+		LIBORMarketModelInterface liborMarketModel = new LiborMarketModelWithBridgeInterpolation(liborPeriodDiscretization, null, forwardCurve, new DiscountCurveFromForwardCurve(forwardCurve), new RandomVariableFactory(), covarianceModel, calibrationItems, properties, interpolationDriver);
 
 		
 		BrownianMotionInterface brownianMotion = new net.finmath.montecarlo.BrownianMotion(timeDiscretization, numberOfFactors, numberOfPaths, 3141);
@@ -201,7 +218,7 @@ public class LMMWIthBB {
 		properties.put("stateSpace", LIBORMarketModel.StateSpace.LOGNORMAL.name());
 
 		// Empty array of calibration items - hence, liborModel will use given covariance
-		LiborMarketModelWithBridgeInterpolation.CalibrationItem[] calibrationItems = new LiborMarketModelWithBridgeInterpolation.CalibrationItem[0];
+		LIBORMarketModel.CalibrationItem[] calibrationItems = new LIBORMarketModel.CalibrationItem[0];
 		
 		/*
 		 * Create corresponding LIBOR Market Model
