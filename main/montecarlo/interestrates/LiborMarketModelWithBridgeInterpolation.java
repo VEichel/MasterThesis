@@ -562,6 +562,7 @@ public class LiborMarketModelWithBridgeInterpolation extends AbstractModel imple
 		int    previousLiborIndex = getLiborPeriodIndex(processTime); 
 		
 		//if(previousLiborIndex>=0) throw new UnsupportedOperationException("This method is only for inner period LIBORs!");
+		RandomVariableInterface evaluationTimeScalingFactor = covarianceModel.getEvaluationTimeScalingFactor(evaluationTimeIndex);
 		
 		if(previousLiborIndex<0)	previousLiborIndex = (-previousLiborIndex-1)-1;	//i
 		double previousLiborTime 			= getLiborPeriod(previousLiborIndex);   //T_i
@@ -573,15 +574,15 @@ public class LiborMarketModelWithBridgeInterpolation extends AbstractModel imple
 		RandomVariableInterface bridge		= getBrownianBridge(previousLiborIndex, processTime);
 		RandomVariableInterface libor;
 		if(interpolationScheme == InterpolationScheme.LINEAR) {
-			libor = startLibor.mult(periodLenght).add(1.0).mult(alpha).add(1-alpha).add(bridge).sub(1.0).div(shortPeriodLenght);
+			libor = startLibor.mult(periodLenght).add(1.0).mult(alpha).add(1-alpha).add(bridge.mult(evaluationTimeScalingFactor)).sub(1.0).div(shortPeriodLenght);
 		}
 		
 		if(interpolationScheme == InterpolationScheme.LOGLINEAR) {
-			libor = startLibor.mult(periodLenght).add(1.0).log().mult(alpha).exp().add(bridge).sub(1.0).div(shortPeriodLenght);
+			libor = startLibor.mult(periodLenght).add(1.0).log().mult(alpha).exp().add(bridge.mult(evaluationTimeScalingFactor)).sub(1.0).div(shortPeriodLenght);
 		}
 		else { throw new UnsupportedOperationException("InterpolationScheme not supported!"); }
 		
-		if(getDiscountCurve() != null) {
+		if(getForwardRateCurve() != null) {
 			double analyticLibor				= getForwardRateCurve().getForward(getAnalyticModel(), previousLiborTime, shortPeriodLenght);
 			double analyticLiborShortPeriod		= getForwardRateCurve().getForward(getAnalyticModel(), previousLiborTime, periodLenght);
 			double analyticInterpolatedOnePlusLiborDt		= (1 + analyticLiborShortPeriod * periodLenght) / Math.exp(Math.log(1 + analyticLiborShortPeriod * periodLenght) * alpha);
@@ -591,7 +592,6 @@ public class LiborMarketModelWithBridgeInterpolation extends AbstractModel imple
 		}
 	
 		return libor;
-		
 	}
 	
 	/**
@@ -625,7 +625,7 @@ public class LiborMarketModelWithBridgeInterpolation extends AbstractModel imple
 			int bridgeTimeIndex = bridgeDiscretization.getTimeIndex(time);
 			for (int timeIndex = 0; timeIndex < brownianBridgeValues[liborIndex].length - 1; timeIndex++) {
 				brownianBridgeValue = brownianBridge.getIncrement(timeIndex, 0)/*.mult(covarianceModel.getFactorLoadingForInterpolation(globalTimeIndex)[0])*/.add(brownianBridgeValue);
-				brownianBridgeValues[liborIndex][timeIndex + 1] = brownianBridgeValue;
+				brownianBridgeValues[liborIndex][timeIndex + 1] =  brownianBridgeValue;
 			}
 			return brownianBridgeValues[liborIndex][bridgeTimeIndex];
 		}
