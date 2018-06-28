@@ -31,5 +31,11 @@ public abstract class AbstractLiborCovarianceModelWithInterpolation extends Abst
 		}
 		return varianceForInterpolationPeriod;
 	}
+	
+	public abstract RandomVariableInterface getEvaluationTimeScalingFactor(double time);
+	
+	public RandomVariableInterface getEvaluationTimeScalingFactor(int timeIndex) {
+		return getEvaluationTimeScalingFactor(getTimeDiscretization().getTime(timeIndex));
+	}
 
 }

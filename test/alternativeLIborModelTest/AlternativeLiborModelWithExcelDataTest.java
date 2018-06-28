@@ -20,7 +20,6 @@ public class AlternativeLiborModelWithExcelDataTest {
 	public static void main(String[] args) {
 		
 		ExcelData[] excelData = readExcelData("C:\\Users\\vince\\Google Drive\\UNI\\MasterThesis\\Literatur\\Excel\\Market Data EUR USD.xls");
-		
 	}
 	
 	

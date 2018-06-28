@@ -5,17 +5,24 @@ import java.util.Arrays;
 import org.apache.commons.lang3.ArrayUtils;
 
 import net.finmath.montecarlo.RandomVariable;
+import net.finmath.montecarlo.interestrate.modelplugins.AbstractLIBORCovarianceModel;
 import net.finmath.montecarlo.interestrate.modelplugins.AbstractLIBORCovarianceModelParametric;
 import net.finmath.stochastic.RandomVariableInterface;
+import sun.reflect.generics.tree.ArrayTypeSignature;
 
 public class LiborCovarianceModelWithInterpolation extends AbstractLiborCovarianceModelWithInterpolation {
 
 	public enum InterpolationVarianceScheme { PIECEWISECONSTANT, CONSTANT, FINEST }
+	public enum EvaluationTimeScalingScheme	{ PIECEWISECONSTANT, CONSTANT, FINEST }
 		
 	
-	private final AbstractLIBORCovarianceModelParametric nonInterpolationModel;
+	private final AbstractLIBORCovarianceModel	nonInterpolationModel;
 	private final InterpolationVarianceScheme interpolationVarianceScheme;
+	private final EvaluationTimeScalingScheme       evaluationTimeScalingScheme;
 	private final double[] interpolationParameters;
+	private final double[] evaluationTimeScalingParameters;
+	
+	private final boolean nonInterpolationModelIsCalibrated;
 	
 	/**Standard Constructor
 	 * 
@@ -24,14 +31,18 @@ public class LiborCovarianceModelWithInterpolation extends AbstractLiborCovarian
 	 * @param interpolationVarianceScheme
 	 */
 	public LiborCovarianceModelWithInterpolation(
-			AbstractLIBORCovarianceModelParametric nonInterpolationModel,
+			AbstractLIBORCovarianceModel nonInterpolationModel,
 			double[] interpolationParameters,
-			InterpolationVarianceScheme interpolationVarianceScheme) {
+			double[] evaluationTimeScalingParameters,
+			InterpolationVarianceScheme interpolationVarianceScheme,
+			EvaluationTimeScalingScheme	evaluationTimeScalingScheme,
+			boolean 					nonInterpolationModelIsCalibrated) {
 		super(nonInterpolationModel.getTimeDiscretization(), nonInterpolationModel.getLiborPeriodDiscretization(), nonInterpolationModel.getNumberOfFactors());
 		
 		this.nonInterpolationModel = nonInterpolationModel;
 		this.interpolationVarianceScheme = interpolationVarianceScheme;
-		
+		this.evaluationTimeScalingScheme = evaluationTimeScalingScheme;
+		this.nonInterpolationModelIsCalibrated = nonInterpolationModelIsCalibrated;
 		//negative variance not allowed:
 		for (int index = 0; index < interpolationParameters.length; index++) {
 			if(interpolationParameters[index] < 0) interpolationParameters[index] = 0;
@@ -45,7 +56,7 @@ public class LiborCovarianceModelWithInterpolation extends AbstractLiborCovarian
 				throw new ArrayIndexOutOfBoundsException("For piecewise constant interpolation model the parameters lenght must match the number of LIBORs!");
 			}
 			break;
-
+			
 		case CONSTANT:
 			if(interpolationParameters.length != 1) {
 				throw new ArrayIndexOutOfBoundsException("For constant interpolation model the parameters lenght must be 1!");
@@ -63,6 +74,32 @@ public class LiborCovarianceModelWithInterpolation extends AbstractLiborCovarian
 		}
 		
 		this.interpolationParameters = interpolationParameters;
+		
+		switch (evaluationTimeScalingScheme) {
+				
+		case PIECEWISECONSTANT:
+			if(evaluationTimeScalingParameters.length != getLiborPeriodDiscretization().getNumberOfTimeSteps()) {
+				throw new ArrayIndexOutOfBoundsException("For piecewise constant evaluation time scaling model the parameters lenght must match the number of LIBORs!");
+			}
+			break;
+
+		case CONSTANT:
+			if(evaluationTimeScalingParameters.length != 1) {
+				throw new ArrayIndexOutOfBoundsException("For constant evaluation time scaling model the parameters lenght must be 1!");
+			}
+			break;
+			
+		case FINEST:
+			if(evaluationTimeScalingParameters.length != getTimeDiscretization().getNumberOfTimeSteps()) {
+				throw new ArrayIndexOutOfBoundsException("For finest evaluation time scaling model the parameters lenght must be the number of time steps!");
+			}
+			break;
+			
+		default:
+			throw new IllegalArgumentException("Evaluation time scaling model not known!");	
+		}
+		
+		this.evaluationTimeScalingParameters = evaluationTimeScalingParameters;
 	}
 	
 	/**Constructor using the Interpolation Variance Scheme: constant.
@@ -73,7 +110,7 @@ public class LiborCovarianceModelWithInterpolation extends AbstractLiborCovarian
 	public LiborCovarianceModelWithInterpolation(
 			AbstractLIBORCovarianceModelParametric nonInterpolationModel,
 			double[] interpolationParameters) {
-		this(nonInterpolationModel, interpolationParameters, InterpolationVarianceScheme.CONSTANT);
+		this(nonInterpolationModel, interpolationParameters, new double[] {1.0}, InterpolationVarianceScheme.CONSTANT, EvaluationTimeScalingScheme.CONSTANT, false);
 	}
 
 	
@@ -151,26 +188,76 @@ public class LiborCovarianceModelWithInterpolation extends AbstractLiborCovarian
 		return varianceForInterpolationPeriod;
 	}
 	
+	@Override
+	public RandomVariableInterface getEvaluationTimeScalingFactor(double time) {
+		
+		switch (interpolationVarianceScheme) {
+				
+		case CONSTANT:
+			return new RandomVariable(evaluationTimeScalingParameters[0]);
+
+		case PIECEWISECONSTANT:
+			int liborPeriod = getLiborPeriodDiscretization().getTimeIndex(time);
+			if(liborPeriod<0) liborPeriod = (-liborPeriod - 1) - 1;
+			
+			return new RandomVariable(evaluationTimeScalingParameters[liborPeriod]);
+			
+		case FINEST:
+			int timeIndex = getTimeDiscretization().getTimeIndex(time);
+			if(timeIndex<0) timeIndex = -timeIndex - 1;
+			
+			return new RandomVariable(evaluationTimeScalingParameters[timeIndex]);
+			
+		default:
+			break;
+		}
+		
+		throw new IllegalArgumentException("Interpolation Variance Scheme not known!");	
+	}
 	
 	@Override
 	public double[] getParameter() {
 		
-		double[] nonInterpolationModelParameters = nonInterpolationModel.getParameter();
-		return ArrayUtils.addAll(nonInterpolationModelParameters, interpolationParameters);
+		double[] temp;
+		
+		if(!nonInterpolationModelIsCalibrated) {
+			double[] nonInterpolationModelParameters = ((AbstractLIBORCovarianceModelParametric) nonInterpolationModel).getParameter();
+			temp = ArrayUtils.addAll(nonInterpolationModelParameters, interpolationParameters);
+			return ArrayUtils.addAll(temp, evaluationTimeScalingParameters);
+		} else {
+		//If the covariance Model for the coarse Libor Tenors is already calibrated, we do not return those parameter.
+			temp = interpolationParameters;
+		}
+		return ArrayUtils.addAll(temp, evaluationTimeScalingParameters);
 	}
 
 	@Override
 	public Object clone() {
-		return new LiborCovarianceModelWithInterpolation(nonInterpolationModel, interpolationParameters, interpolationVarianceScheme);
+		return new LiborCovarianceModelWithInterpolation(nonInterpolationModel, interpolationParameters, evaluationTimeScalingParameters, interpolationVarianceScheme, evaluationTimeScalingScheme, nonInterpolationModelIsCalibrated);
 	}
 
 	@Override
 	public AbstractLIBORCovarianceModelParametric getCloneWithModifiedParameters(double[] parameters) {
-		int numberOfNonInterpolationParameters = nonInterpolationModel.getParameter().length;
-		double[] newNonInterpolationParameters = Arrays.copyOfRange(parameters, 0, numberOfNonInterpolationParameters);
-		double[] newInterpolationParameters    = Arrays.copyOfRange(parameters, numberOfNonInterpolationParameters, parameters.length);
-		AbstractLIBORCovarianceModelParametric newNonInterpolationModel = nonInterpolationModel.getCloneWithModifiedParameters(newNonInterpolationParameters);
-		return new LiborCovarianceModelWithInterpolation(newNonInterpolationModel, newInterpolationParameters, interpolationVarianceScheme);
+		
+		int numberOfInterpolationParameters	= interpolationParameters.length;
+		
+		double[] newInterpolationParameters;
+		double[] newEvaluationTimeScalingParameters;
+		AbstractLIBORCovarianceModelParametric newNonInterpolationModel;
+		
+		if(!nonInterpolationModelIsCalibrated) {
+			int numberOfNonInterpolationParameters		= ((AbstractLIBORCovarianceModelParametric) nonInterpolationModel).getParameter().length;
+			double[] newNonInterpolationParameters		= Arrays.copyOfRange(parameters, 0, numberOfNonInterpolationParameters);
+			newInterpolationParameters    				= Arrays.copyOfRange(parameters, numberOfNonInterpolationParameters, numberOfNonInterpolationParameters + numberOfInterpolationParameters);
+			newEvaluationTimeScalingParameters 			= Arrays.copyOfRange(parameters, numberOfNonInterpolationParameters + numberOfInterpolationParameters, parameters.length);
+			newNonInterpolationModel 					= ((AbstractLIBORCovarianceModelParametric) nonInterpolationModel).getCloneWithModifiedParameters(newNonInterpolationParameters);
+		} else {
+			newInterpolationParameters    	   = Arrays.copyOfRange(parameters, 0, numberOfInterpolationParameters);
+			newEvaluationTimeScalingParameters = Arrays.copyOfRange(parameters, numberOfInterpolationParameters, parameters.length);	
+			newNonInterpolationModel		   = (AbstractLIBORCovarianceModelParametric) nonInterpolationModel;
+		}
+		
+		return new LiborCovarianceModelWithInterpolation(newNonInterpolationModel, newInterpolationParameters, newEvaluationTimeScalingParameters, interpolationVarianceScheme, evaluationTimeScalingScheme, nonInterpolationModelIsCalibrated);
 	}
 
 	@Override

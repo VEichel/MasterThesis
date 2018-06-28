@@ -44,7 +44,7 @@ public class LMMWIthBB {
 					LMMBB.getLIBOR(0.0, LMM.getTime(timeIndex), 20.0).get(15));
 		}
 		
-		
+		/*
 		System.out.println();
 		System.out.println("Test 2");
 		//Test 2:
@@ -67,10 +67,9 @@ public class LMMWIthBB {
 			double[] swaprates    = {0.01};
 			
 			SimpleSwap swap = new SimpleSwap(fixingDates, paymentDates, swaprates);
-			System.out.println(swap.getValue(LMM) + "\t" + swap.getValue(LMMBB));
-			
+			System.out.println(swap.getValue(LMM) + "\t" + swap.getValue(LMMBB));	
 		}
-		
+		*/
 	}
 	
 	public static LIBORModelMonteCarloSimulation createLIBORMarketModelWithBB(
@@ -89,7 +88,6 @@ public class LMMWIthBB {
 				new double[] {0.05, 0.05, 0.05, 0.05, 0.05}	/* forwards */,
 				liborPeriodLength							/* tenor / period length */
 				);
-
 		/*
 		 * Create a simulation time discretization
 		 */
@@ -139,7 +137,7 @@ public class LMMWIthBB {
 		}
 		*/
 		double[] interpolationParameters = new double[1];
-		interpolationParameters[0] = 0.05;
+		interpolationParameters[0] = 0.00;
 		 
 		
 		AbstractLiborCovarianceModelWithInterpolation covarianceModel = new LiborCovarianceModelWithInterpolation(liborCovarianceModel, interpolationParameters);
@@ -177,6 +175,7 @@ public class LMMWIthBB {
 				liborPeriodLength							/* tenor / period length */
 				);
 
+		System.out.println(forwardCurve.getExtrapolationMethod().toString());
 		/*
 		 * Create a simulation time discretization
 		 */

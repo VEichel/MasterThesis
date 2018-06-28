@@ -24,6 +24,7 @@ import org.junit.Test;
 import montecarlo.interestrates.LiborMarketModelWithBridgeInterpolation;
 import montecarlo.interestrates.modelplugins.AbstractLiborCovarianceModelWithInterpolation;
 import montecarlo.interestrates.modelplugins.LiborCovarianceModelWithInterpolation;
+import montecarlo.interestrates.modelplugins.LiborCovarianceModelWithInterpolation.EvaluationTimeScalingScheme;
 import montecarlo.interestrates.modelplugins.LiborCovarianceModelWithInterpolation.InterpolationVarianceScheme;
 import net.finmath.exception.CalculationException;
 import net.finmath.marketdata.calibration.ParameterObjectInterface;
@@ -87,12 +88,12 @@ public class LIBORMarketModelCalibrationTest {
 	private static DecimalFormat formatterDeviation	= new DecimalFormat(" 0.00000E00;-0.00000E00", new DecimalFormatSymbols(Locale.ENGLISH));
 
 	double lastTime	= 40.0;
-	double dt		= 0.25;
+	double dt		= 0.5;
 	TimeDiscretization timeDiscretization = new TimeDiscretization(0.0, (int) (lastTime / dt), dt);
 	
 /*changed*/
 	double lastLiborTime = 40.0;
-	double liborDt		 = 0.25;
+	double liborDt		 = 10;
 
 	final TimeDiscretizationInterface liborPeriodDiscretization = new TimeDiscretization(0.0, (int) (lastLiborTime / liborDt), liborDt);
 /*changed end*/
@@ -323,9 +324,12 @@ public class LIBORMarketModelCalibrationTest {
 		
 		
 		double[] interpolationParameters = new double[timeDiscretization.getNumberOfTimeSteps()];
-		Arrays.fill(interpolationParameters, 0.0);
-		AbstractLiborCovarianceModelWithInterpolation covarianceModelWithInterpolation = new LiborCovarianceModelWithInterpolation(covarianceModelDisplaced,
-				interpolationParameters, InterpolationVarianceScheme.FINEST);
+		Arrays.fill(interpolationParameters, 0.02);
+		double[] evaluationTimeScalingParameters = new double[timeDiscretization.getNumberOfTimeSteps()];
+		Arrays.fill(evaluationTimeScalingParameters, 0.8);
+		
+		AbstractLiborCovarianceModelWithInterpolation covarianceModelWithInterpolation = new LiborCovarianceModelWithInterpolation( ((LIBORMarketModel) liborMarketModelCalibrated).getCovarianceModel(),
+				interpolationParameters, evaluationTimeScalingParameters, InterpolationVarianceScheme.FINEST, EvaluationTimeScalingScheme.FINEST, true);
 	
 		BrownianMotionInterface interpolationDriver = new BrownianMotion(timeDiscretization, 1, numberOfPaths, /*seed*/ 18273625);
 		
