@@ -145,7 +145,7 @@ public class LIBORMarketModelCalibrationTest {
 		System.out.println("TEST ATM Swaption Calibration:");
 		System.out.println("------------------------------");
 		
-		final int numberOfPaths		= 1000;
+		final int numberOfPaths		= 100;
 		final int numberOfFactors	= 1;
 
 		long millisCurvesStart = System.currentTimeMillis();
