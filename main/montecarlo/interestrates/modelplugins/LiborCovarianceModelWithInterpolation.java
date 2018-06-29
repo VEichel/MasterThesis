@@ -8,9 +8,13 @@ import net.finmath.montecarlo.RandomVariable;
 import net.finmath.montecarlo.interestrate.modelplugins.AbstractLIBORCovarianceModel;
 import net.finmath.montecarlo.interestrate.modelplugins.AbstractLIBORCovarianceModelParametric;
 import net.finmath.stochastic.RandomVariableInterface;
-import sun.reflect.generics.tree.ArrayTypeSignature;
 
 public class LiborCovarianceModelWithInterpolation extends AbstractLiborCovarianceModelWithInterpolation {
+
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = -8077895582118596189L;
 
 	public enum InterpolationVarianceScheme { PIECEWISECONSTANT, CONSTANT, FINEST }
 	public enum EvaluationTimeScalingScheme	{ PIECEWISECONSTANT, CONSTANT, FINEST }

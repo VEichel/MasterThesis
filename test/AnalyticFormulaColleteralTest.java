@@ -29,16 +29,34 @@ public class AnalyticFormulaColleteralTest {
 	final static double liborPeriodLength	= 10;
 	final static double liborRateTimeHorzion	= 40.0;
 	final static double lastTime	= 40.0;
-	final static double dt		= 0.5;
+	final static double dt		= 0.1;
 	
 	public static void main(String[] args) throws CalculationException {
 		
-		LIBORModelMonteCarloSimulation LMMBB = createLIBORMarketModelWithBB(1000, 3, 0.1);
+		LIBORModelMonteCarloSimulation LMMBB = createLIBORMarketModelWithBB(10000, 3, 0.1);
 		
 		ColleteralOption colleteralOptionNonAnalytic = new ColleteralOption(12.0, 18.0, 0.02, false);
 		System.out.println(colleteralOptionNonAnalytic.getValue(0.0, LMMBB).getAverage());
 		
+		ColleteralOption colleteralOptionAnalytic	 = new ColleteralOption(12.0, 18.0, 0.02, true);
+		System.out.println(colleteralOptionAnalytic.getValue(0.0, LMMBB).getAverage());
+		
 	}
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
 	
 	public static LIBORModelMonteCarloSimulation createLIBORMarketModelWithBB(
 			int numberOfPaths, int numberOfFactors, double correlationDecayParam) throws CalculationException {

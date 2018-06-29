@@ -26,14 +26,14 @@ public class BrownianBridgePaths {
 		
 		RandomVariableInterface start = new RandomVariable(0.0);
 		RandomVariableInterface end   = new RandomVariable(0.0);
-		int numberOfPaths = 1000000;
-		TimeDiscretizationInterface timeDiscretization = new TimeDiscretization(1, 20, 0.5);
+		int numberOfPaths = 100000;
+		TimeDiscretizationInterface timeDiscretization = new TimeDiscretization(10, 100, 0.1);
 		BrownianMotion standardMotion = new BrownianMotion(timeDiscretization, 1, numberOfPaths, 12234);
 		BrownianBridge standardBridge = new BrownianBridge(timeDiscretization, numberOfPaths, /* seed */ 12234, start, end);
 		
 		RandomVariableInterface[] variances = new RandomVariableInterface[timeDiscretization.getNumberOfTimeSteps()];
 		for (int i = 0; i < variances.length; i++) {
-			variances[i] = new RandomVariable(0.5);
+			variances[i] = new RandomVariable(0.02);
 		}
 		BrownianBridgeWithVariance varianceBridge = new BrownianBridgeWithVariance(timeDiscretization, standardMotion, variances);
 		
@@ -46,8 +46,8 @@ public class BrownianBridgePaths {
 			bridgeValueWithVariance[timeIndex+1] = bridgeValueWithVariance[timeIndex].add(varianceBridge.getIncrement(timeIndex,0));
 		}
 		
-		int n = 5;
-		int m = 3;
+		int n = 20;
+		int m = 80;
 		System.out.println("Variance: ");
 		System.out.println(bridgeValue[2].getVariance());
 		System.out.println("with extra: " + bridgeValueWithVariance[n].getVariance());
