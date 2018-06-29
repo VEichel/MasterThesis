@@ -44,6 +44,19 @@ public class BrownianBridgeWithVariance implements BrownianMotionInterface {
 			BrownianMotionInterface generator, RandomVariableInterface[] variances) {
 		this(timeDiscretization, generator, variances, new RandomVariableFactory());
 	}
+	
+	public BrownianBridgeWithVariance(TimeDiscretizationInterface timeDiscretization,
+			BrownianMotionInterface generator, double variance) {
+		this.randomVariableFactory = new RandomVariableFactory();
+		
+		RandomVariableInterface[] variances = new RandomVariableInterface[timeDiscretization.getNumberOfTimeSteps()];
+		Arrays.fill(variances, new RandomVariableFactory().createRandomVariable(variance));
+		
+		this.timeDiscretization = timeDiscretization;	
+		this.variances = variances;
+		this.generator = generator;
+		
+	}
 
 	
 	/* (non-Javadoc)
@@ -87,10 +100,10 @@ public class BrownianBridgeWithVariance implements BrownianMotionInterface {
 
 				// Calculate the next point using the "scheme" of the Brownian bridge
 				RandomVariableInterface nextRealization = brownianBridge.mult(1.0-alpha).add(generator.getBrownianIncrement(generatorTimeIndex, factor)
-						.mult(variances[timeIndex]).mult(Math.sqrt(1-alpha)));
+						/*.mult(variances[timeIndex].sqrt())*/.mult(Math.sqrt(1-alpha)));
 				
 				// Store the increment
-				brownianIncrements[timeIndex][factor] = nextRealization.sub(brownianBridge);
+				brownianIncrements[timeIndex][factor] = nextRealization.sub(brownianBridge).mult(variances[timeIndex].sqrt());
 				
 				// Update the bridge to the current point
 				brownianBridge = nextRealization;
