@@ -26,14 +26,16 @@ import net.finmath.time.TimeDiscretization;
 
 public class AnalyticFormulaColleteralTest {
 
+	static int seed = 122433;
+	
 	final static double liborPeriodLength	= 10;
 	final static double liborRateTimeHorzion	= 40.0;
 	final static double lastTime	= 40.0;
-	final static double dt		= 0.1;
+	final static double dt		= 1.0;
 	
 	public static void main(String[] args) throws CalculationException {
 		
-		LIBORModelMonteCarloSimulation LMMBB = createLIBORMarketModelWithBB(10000, 3, 0.1);
+		LIBORModelMonteCarloSimulation LMMBB = createLIBORMarketModelWithBB(100000, 3, 0.1);
 		
 		ColleteralOption colleteralOptionNonAnalytic = new ColleteralOption(12.0, 18.0, 0.02, false);
 		System.out.println(colleteralOptionNonAnalytic.getValue(0.0, LMMBB).getAverage());
@@ -134,7 +136,7 @@ public class AnalyticFormulaColleteralTest {
 		/*
 		 * Create corresponding LIBOR Market Model
 		 */
-		BrownianMotionInterface interpolationDriver = new BrownianMotion(timeDiscretization, 1, numberOfPaths, 412421);
+		BrownianMotionInterface interpolationDriver = new BrownianMotion(timeDiscretization, 1, numberOfPaths, seed);
 		
 		LIBORMarketModelInterface liborMarketModel = new LiborMarketModelWithBridgeInterpolation(liborPeriodDiscretization, null, forwardCurve, new DiscountCurveFromForwardCurve(forwardCurve), new RandomVariableFactory(), covarianceModel, calibrationItems, properties, interpolationDriver);
 

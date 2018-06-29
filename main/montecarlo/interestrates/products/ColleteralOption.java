@@ -3,10 +3,13 @@ package montecarlo.interestrates.products;
 import java.util.Arrays;
 
 import org.apache.commons.math3.analysis.function.Abs;
+import org.apache.commons.math3.distribution.NormalDistribution;
 
 import montecarlo.interestrates.LiborMarketModelWithBridgeInterpolation;
 import montecarlo.interestrates.modelplugins.AbstractLiborCovarianceModelWithInterpolation;
 import net.finmath.exception.CalculationException;
+import net.finmath.montecarlo.RandomVariable;
+import net.finmath.montecarlo.RandomVariableFactory;
 import net.finmath.montecarlo.interestrate.LIBORModelMonteCarloSimulationInterface;
 import net.finmath.montecarlo.interestrate.products.AbstractLIBORMonteCarloProduct;
 import net.finmath.stochastic.RandomVariableInterface;
@@ -40,6 +43,8 @@ public class ColleteralOption extends AbstractLIBORMonteCarloProduct {
 	@Override
 	public RandomVariableInterface getValue(double evaluationTime, LIBORModelMonteCarloSimulationInterface model) throws CalculationException {
 	
+		RandomVariableInterface values;
+		
 		if(useAnalyticFormula) {
 			//currently only working for paymentDate and fixingDate in same period.
 			LiborMarketModelWithBridgeInterpolation interpolationModel = (LiborMarketModelWithBridgeInterpolation) model.getModel();
@@ -91,23 +96,66 @@ public class ColleteralOption extends AbstractLIBORMonteCarloProduct {
 			bridgeVarianceAtFixing  = bridgeVarianceAtFixing * timeScalingFactorSqaured;
 			//Finished BB Variance calculations
 			
+			//Calculate needed Variables (complete covariance & residuelRandomVariable)
+			double discountCurveAtFixing    = interpolationModel.getDiscountCurve().getDiscountFactor(fixingDate);
+			double discountCurveAtPayment   = interpolationModel.getDiscountCurve().getDiscountFactor(paymentDate);
+			double discountCurveAtPeriodEnd = interpolationModel.getDiscountCurve().getDiscountFactor(liborEndTime);
 			
+			RandomVariableInterface	adjustedNumeraireAtEnd     = interpolationModel.getNumeraire(liborEndTime);
+			RandomVariableInterface logLiborOverPeriod         = interpolationModel.getLIBOR(interpolationModel.getTimeIndex(interpolationModel.getLiborPeriod(liborStartIndex)), liborStartIndex)
+																	.mult(liborEndTime - liborStartTime).add(1.0).log();
+			RandomVariableInterface fixingExpLiborOverPeriod   = logLiborOverPeriod.mult((liborEndTime-fixingDate)/(liborEndTime-liborStartTime)).exp();
+			RandomVariableInterface paymentExpLiborOverPeriod  = logLiborOverPeriod.mult((liborEndTime-paymentDate)/(liborEndTime-liborStartTime)).exp();
+
+			//for now no adjustment is made
+			RandomVariableInterface residuelRandomVariable     = fixingExpLiborOverPeriod.sub( paymentExpLiborOverPeriod.mult( 1 + strike * (paymentDate - fixingDate)) )
+																	.div(adjustedNumeraireAtEnd.mult(paymentDate - fixingDate));
 			
+			RandomVariableInterface coefficientBridgeAtFixing  = adjustedNumeraireAtEnd.mult(paymentDate - fixingDate).invert();
+			RandomVariableInterface coefficientBridgeAtPayment = adjustedNumeraireAtEnd.mult(paymentDate - fixingDate).div(1 + strike * (paymentDate - fixingDate)).invert();
+			
+			RandomVariableInterface completeVariance = coefficientBridgeAtFixing.pow(2.0).mult(bridgeVarianceAtFixing)
+															.add(coefficientBridgeAtPayment.pow(2.0).mult(bridgeVarianceAtPayment))
+															.sub(coefficientBridgeAtFixing.mult(coefficientBridgeAtPayment).mult(2*bridgeCovariance));
+			//end Calculate needed Variables
+			
+			//Calculate Average
+			double[] doubleValues = new double[residuelRandomVariable.size()];
+			for (int pathIndex = 0; pathIndex < doubleValues.length; pathIndex++) {
+				double residuelVariable = residuelRandomVariable.get(pathIndex);
+				double varianceVariable = completeVariance.get(pathIndex);
+				NormalDistribution normalDistribution = new NormalDistribution(0.0, Math.sqrt(varianceVariable));
+				double cumulativeProbability = normalDistribution.cumulativeProbability(- residuelVariable);
+				doubleValues[pathIndex] = residuelVariable * (1 - 2 * cumulativeProbability) 
+											+ varianceVariable * normalDistribution.density( - residuelVariable);
+			}
+			values = new RandomVariable(evaluationTime, doubleValues);
+			//temp test:
+			double test = (interpolationModel.getBrownianBridge(liborStartIndex, fixingDate).mult(coefficientBridgeAtFixing.get(1)))
+							.sub(interpolationModel.getBrownianBridge(liborStartIndex, paymentDate).mult(coefficientBridgeAtPayment.get(1))).getVariance();
+			//RandomVariableInterface test = residuelRandomVariable.add(coefficientBridgeAtFixing.mult(interpolationModel.getBrownianBridge(liborStartIndex, fixingDate)))
+			//								.sub(coefficientBridgeAtPayment.mult(interpolationModel.getBrownianBridge(liborStartIndex, paymentDate)));
+			//RandomVariableInterface test = adjustedNumeraireAtEnd.mult(paymentDate-fixingDate).invert().mult(model.getLIBOR(fixingDate, fixingDate, liborEndTime).mult(liborEndTime-fixingDate).add(1)
+			//		.sub(model.getLIBOR(paymentDate, paymentDate, liborEndTime).mult(liborEndTime-paymentDate).add(1).mult(1+strike*(paymentDate-fixingDate)) ) );
+			System.out.println("test: " + test + "   " + completeVariance.get(1));
+			System.out.println();
+			//end temp test
+									
+		} else {
+			RandomVariableInterface numeraireAtFixing  	  				= model.getNumeraire(fixingDate);
+			RandomVariableInterface numeraireAtPayment	 				= model.getNumeraire(paymentDate);
+		
+			RandomVariableInterface monteCarloProbabilitiesAtPayment    = model.getMonteCarloWeights(paymentDate);
+			
+			double periodLenght 					    			  	= paymentDate - fixingDate;
+			
+			values = numeraireAtPayment.div(numeraireAtFixing).sub(1).div(periodLenght).sub(strike).floor(0.0);
+			values = values.div(numeraireAtPayment).mult(monteCarloProbabilitiesAtPayment);
 		}
-		RandomVariableInterface numeraireAtFixing  	  				= model.getNumeraire(fixingDate);
-		RandomVariableInterface numeraireAtPayment	 				= model.getNumeraire(paymentDate);
 		RandomVariableInterface numeraireAtEvaluation				= model.getNumeraire(evaluationTime);
-		
 		RandomVariableInterface monteCarloProbabilitiesAtEvaluation = model.getMonteCarloWeights(evaluationTime);
-		RandomVariableInterface monteCarloProbabilitiesAtPayment    = model.getMonteCarloWeights(paymentDate);
-		
-		double periodLenght 					    			  	= paymentDate - fixingDate;
-		
-		RandomVariableInterface values = numeraireAtPayment.div(numeraireAtFixing).sub(1).div(periodLenght).sub(strike).floor(0.0);
-								values = values.div(numeraireAtPayment).mult(monteCarloProbabilitiesAtPayment);
-								
-								values = values.mult(numeraireAtEvaluation).div(monteCarloProbabilitiesAtEvaluation);
-								
+		if(useAnalyticFormula) monteCarloProbabilitiesAtEvaluation = model.getRandomVariableForConstant(1.0);
+		values = values.mult(numeraireAtEvaluation).div(monteCarloProbabilitiesAtEvaluation);
 		return values;
 	}
 

@@ -5,8 +5,9 @@ import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 import java.util.Locale;
 
+import org.apache.commons.math3.distribution.NormalDistribution;
+
 import montecarlo.interestrates.BrownianBridgeWithVariance;
-import net.finmath.functions.NormalDistribution;
 import net.finmath.montecarlo.BrownianBridge;
 import net.finmath.montecarlo.BrownianMotion;
 import net.finmath.montecarlo.BrownianMotionInterface;
@@ -26,7 +27,7 @@ public class BrownianBridgePaths {
 		
 		RandomVariableInterface start = new RandomVariable(0.0);
 		RandomVariableInterface end   = new RandomVariable(0.0);
-		int numberOfPaths = 100000;
+		int numberOfPaths = 1000;
 		TimeDiscretizationInterface timeDiscretization = new TimeDiscretization(10, 100, 0.1);
 		BrownianMotion standardMotion = new BrownianMotion(timeDiscretization, 1, numberOfPaths, 12234);
 		BrownianBridge standardBridge = new BrownianBridge(timeDiscretization, numberOfPaths, /* seed */ 12234, start, end);
@@ -167,7 +168,17 @@ public class BrownianBridgePaths {
 		for (int i = 0; i < numberOfPaths && i<10000; i++) {
 			System.out.println(bridgeValueWithVariance[4].get(i));
 		}*/
-		
+		double floor = -0.5;
+		double variance = 2.0;
+		System.out.println();
+		System.out.println();
+		NormalDistribution nd = new NormalDistribution(0.0, Math.sqrt(variance));
+		double cumulative = nd.cumulativeProbability(floor);
+		System.out.println(cumulative*floor+variance * nd.density(floor));
+		TimeDiscretization timeDiscretization2 = new TimeDiscretization(0, 10, variance);
+		BrownianMotion bm = new BrownianMotion(timeDiscretization2, 1, 100000, 1243);
+		RandomVariableInterface nv = bm.getBrownianIncrement(0, 0);
+		System.out.println(nv.floor(floor).getAverage());
 	}
 
 	 
