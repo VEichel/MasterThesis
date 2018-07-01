@@ -58,6 +58,7 @@ public class ColleteralOption extends AbstractLIBORMonteCarloProduct {
 			int liborStartIndexFixing  			 = interpolationModel.getLiborPeriodIndex(fixingDate);
 			int liborStartIndexPayment 			 = interpolationModel.getLiborPeriodIndex(paymentDate);
 			
+			//needed times for Fixing
 			boolean fixingDateOnLiborStart = true;
 			if(liborStartIndexFixing<0) {
 				liborStartIndexFixing = (-liborStartIndexFixing - 1) - 1;
@@ -67,62 +68,119 @@ public class ColleteralOption extends AbstractLIBORMonteCarloProduct {
 		    double liborStartTimeFixing		 = interpolationModel.getLiborPeriod(liborStartIndexFixing);
 		    double liborEndTimeFixing	 	 = interpolationModel.getLiborPeriod(liborEndIndexFixing);
 		    
+		    //needed times for payment
 		    boolean paymentDateOnLiborStart = true;
 			if(liborStartIndexPayment<0) {
 				liborStartIndexPayment = (-liborStartIndexPayment - 1) - 1;
 				paymentDateOnLiborStart = false;
 			}
+			boolean samePeriod = true;
+			if(liborStartIndexFixing != liborStartIndexPayment) {
+				samePeriod = false;
+			}
 		    int liborEndIndexPayment 		 = liborStartIndexPayment + 1;		    
 		    double liborStartTimePayment	 = interpolationModel.getLiborPeriod(liborStartIndexPayment);
 		    double liborEndTimePayment	 	 = interpolationModel.getLiborPeriod(liborEndIndexPayment);
-		    
-		    System.out.println(paymentDateOnLiborStart);
-		    System.out.println(fixingDateOnLiborStart);
+			
+
 		    
 		    if(fixingDateOnLiborStart && paymentDateOnLiborStart) {
 		    	this.useAnalyticFormula = false;
 		    	return this.getValue(evaluationTime, model);
 		    }
 		    
-		    int periodStartToPaymentIndex    = paymentIndex - interpolationModel.getTimeIndex(liborStartTimeFixing);
-		    int periodStartToFixingIndex     = fixingIndex  - interpolationModel.getTimeIndex(liborStartTimeFixing);
+		    int periodStartToFixingIndex    = fixingIndex - interpolationModel.getTimeIndex(liborStartTimeFixing);
+		    int periodStartToPaymentIndex   = paymentIndex  - interpolationModel.getTimeIndex(liborStartTimePayment);
+
+		   
 		    
 			//Calculate BB Variance:
-			AbstractLiborCovarianceModelWithInterpolation covarianceModel = (AbstractLiborCovarianceModelWithInterpolation) interpolationModel.getCovarianceModel();
-			double bridgeVarianceAtFixing  = 0.0;
+		    AbstractLiborCovarianceModelWithInterpolation covarianceModel = (AbstractLiborCovarianceModelWithInterpolation) interpolationModel.getCovarianceModel();
+		    double bridgeVarianceAtFixing  = 0.0;
 			double bridgeVarianceAtPayment = 0.0;
 			double bridgeCovariance        = 0.0;
-			for(int i = 1; i < periodStartToPaymentIndex + 1 ; i++) {
-				double varianceI    = covarianceModel.getVarianceForInterpolation(i-1).getAverage();
-				double timeI		= interpolationModel.getTime(i + liborStartIndexFixing);	
-				double timeBeforeI  = interpolationModel.getTime(i + liborStartIndexFixing - 1);
-				if(i < periodStartToFixingIndex + 1) {
-					bridgeVarianceAtFixing  += varianceI * ((timeI - timeBeforeI) - (timeI - timeBeforeI)*(timeI - timeBeforeI)/(liborEndTimeFixing - liborStartTimeFixing));
-				} else {
-					bridgeVarianceAtPayment += varianceI * ((timeI - timeBeforeI) - (timeI - timeBeforeI)*(timeI - timeBeforeI)/(liborEndTimeFixing - liborStartTimeFixing));
-				}
-				for (int j = 1; j < periodStartToPaymentIndex + 1; j++) {
-					double varianceJ    = covarianceModel.getVarianceForInterpolation(j-1).getAverage();
-					double timeJ		= interpolationModel.getTime(j + liborStartIndexFixing);	
-					double timeBeforeJ  = interpolationModel.getTime(j + liborStartIndexFixing - 1);	
-					if(i < periodStartToFixingIndex + 1 && j < periodStartToFixingIndex + 1 && i != j) {
-						bridgeVarianceAtFixing  -= Math.sqrt(varianceI) * Math.sqrt(varianceJ) * (timeI - timeBeforeI) * (timeJ - timeBeforeJ) / (liborEndTimeFixing - liborStartTimeFixing);
-					} else if(j < periodStartToFixingIndex + 1 && i != j){
-						bridgeCovariance        -= Math.sqrt(varianceI) * Math.sqrt(varianceJ) * (timeI - timeBeforeI) * (timeJ - timeBeforeJ) / (liborEndTimeFixing - liborStartTimeFixing);
-						bridgeVarianceAtPayment -= Math.sqrt(varianceI) * Math.sqrt(varianceJ) * (timeI - timeBeforeI) * (timeJ - timeBeforeJ) / (liborEndTimeFixing - liborStartTimeFixing);
-					} else if(i != j) {
-						bridgeVarianceAtPayment -= Math.sqrt(varianceI) * Math.sqrt(varianceJ) * (timeI - timeBeforeI) * (timeJ - timeBeforeJ) / (liborEndTimeFixing - liborStartTimeFixing);
+			
+		    if(samePeriod) {
+				for(int i = 1; i < periodStartToPaymentIndex + 1 ; i++) {
+					double varianceI    = covarianceModel.getVarianceForInterpolation(i + liborStartIndexFixing - 1).getAverage();
+					double timeI		= interpolationModel.getTime(i + liborStartIndexFixing);	
+					double timeBeforeI  = interpolationModel.getTime(i + liborStartIndexFixing - 1);
+					if(i < periodStartToFixingIndex + 1) {
+						bridgeVarianceAtFixing  += varianceI * ((timeI - timeBeforeI) - (timeI - timeBeforeI)*(timeI - timeBeforeI)/(liborEndTimeFixing - liborStartTimeFixing));
+					} else {
+						bridgeVarianceAtPayment += varianceI * ((timeI - timeBeforeI) - (timeI - timeBeforeI)*(timeI - timeBeforeI)/(liborEndTimeFixing - liborStartTimeFixing));
+					}
+					for (int j = 1; j < periodStartToPaymentIndex + 1; j++) {
+						double varianceJ    = covarianceModel.getVarianceForInterpolation(j-1).getAverage();
+						double timeJ		= interpolationModel.getTime(j + liborStartIndexFixing);	
+						double timeBeforeJ  = interpolationModel.getTime(j + liborStartIndexFixing - 1);	
+						if(i < periodStartToFixingIndex + 1 && j < periodStartToFixingIndex + 1 && i != j) {
+							bridgeVarianceAtFixing  -= Math.sqrt(varianceI) * Math.sqrt(varianceJ) * (timeI - timeBeforeI) * (timeJ - timeBeforeJ) / (liborEndTimeFixing - liborStartTimeFixing);
+						} else if(j < periodStartToFixingIndex + 1 && i != j){
+							bridgeCovariance        -= Math.sqrt(varianceI) * Math.sqrt(varianceJ) * (timeI - timeBeforeI) * (timeJ - timeBeforeJ) / (liborEndTimeFixing - liborStartTimeFixing);
+							bridgeVarianceAtPayment -= Math.sqrt(varianceI) * Math.sqrt(varianceJ) * (timeI - timeBeforeI) * (timeJ - timeBeforeJ) / (liborEndTimeFixing - liborStartTimeFixing);
+						} else if(i != j) {
+							bridgeVarianceAtPayment -= Math.sqrt(varianceI) * Math.sqrt(varianceJ) * (timeI - timeBeforeI) * (timeJ - timeBeforeJ) / (liborEndTimeFixing - liborStartTimeFixing);
+						}
 					}
 				}
-			}
-			double timeScalingFactorSqaured      = Math.pow(covarianceModel.getEvaluationTimeScalingFactor(evaluationTime).getAverage(), 2);
-			bridgeVarianceAtPayment = (bridgeVarianceAtPayment + bridgeVarianceAtFixing) * timeScalingFactorSqaured;
-			bridgeCovariance		= (bridgeCovariance        + bridgeVarianceAtFixing) * timeScalingFactorSqaured;
-			bridgeVarianceAtFixing  = bridgeVarianceAtFixing * timeScalingFactorSqaured;
+				double timeScalingFactorSqaured      = Math.pow(covarianceModel.getEvaluationTimeScalingFactor(evaluationTime).getAverage(), 2);
+				bridgeVarianceAtPayment = (bridgeVarianceAtPayment + bridgeVarianceAtFixing) * timeScalingFactorSqaured;
+				bridgeCovariance		= (bridgeCovariance        + bridgeVarianceAtFixing) * timeScalingFactorSqaured;
+				bridgeVarianceAtFixing  = bridgeVarianceAtFixing * timeScalingFactorSqaured;
+				
+		    } else {
+				
+				for(int i = 1; i < periodStartToFixingIndex + 1 ; i++) {
+					double varianceIFixing     = covarianceModel.getVarianceForInterpolation(i + liborStartIndexFixing - 1).getAverage();
+					double timeIFixing		   = interpolationModel.getTime(i + liborStartIndexFixing);	
+					double timeBeforeIFixing   = interpolationModel.getTime(i + liborStartIndexFixing - 1);
+					
+					bridgeVarianceAtFixing  += varianceIFixing * ((timeIFixing - timeBeforeIFixing) - (timeIFixing - timeBeforeIFixing)*(timeIFixing - timeBeforeIFixing)/(liborEndTimeFixing - liborStartTimeFixing));
+					
+					for (int j = 1; j < i; j++) {
+						double varianceJFixing    = covarianceModel.getVarianceForInterpolation(j + liborStartIndexFixing - 1).getAverage();
+						double timeJFixing		  = interpolationModel.getTime(j + liborStartIndexFixing);	
+						double timeBeforeJFixing  = interpolationModel.getTime(j + liborStartIndexFixing - 1);	
+						
+					    bridgeVarianceAtFixing  -=  2 * Math.sqrt(varianceIFixing) * Math.sqrt(varianceJFixing) * (timeIFixing - timeBeforeIFixing) * (timeJFixing - timeBeforeJFixing) / (liborEndTimeFixing - liborStartTimeFixing);
+					}
+				}
+				
+				for(int i = 1; i < periodStartToPaymentIndex + 1 ; i++) {
+					double varianceIPayment    = covarianceModel.getVarianceForInterpolation(i + liborStartIndexPayment - 1).getAverage();
+					double timeIPayment		   = interpolationModel.getTime(i + liborStartIndexPayment);	
+					double timeBeforeIPayment  = interpolationModel.getTime(i + liborStartIndexPayment - 1);
+					
+					bridgeVarianceAtPayment += varianceIPayment * ((timeIPayment - timeBeforeIPayment) - (timeIPayment - timeBeforeIPayment)*(timeIPayment - timeBeforeIPayment)/(liborEndTimePayment - liborStartTimePayment));
+					
+					for (int j = 1; j < i; j++) {
+						double varianceJPayment    = covarianceModel.getVarianceForInterpolation(j + liborStartIndexPayment - 1).getAverage();
+						double timeJPayment		  = interpolationModel.getTime(j + liborStartIndexPayment);	
+						double timeBeforeJPayment  = interpolationModel.getTime(j + liborStartIndexPayment - 1);	
+						
+					    bridgeVarianceAtPayment  -=  2 * Math.sqrt(varianceIPayment) * Math.sqrt(varianceJPayment) * (timeIPayment - timeBeforeIPayment) * (timeJPayment - timeBeforeJPayment) / (liborEndTimePayment - liborStartTimePayment);
+					}
+				}
+		    	
+		    }
 			//Finished BB Variance calculations
 			
+		  //temp test 3:
+			double test = interpolationModel.getBrownianBridge(liborStartIndexFixing, fixingDate).getVariance();
+			//RandomVariableInterface test = residuelRandomVariable.add(coefficientBridgeAtFixing.mult(interpolationModel.getBrownianBridge(liborStartIndex, fixingDate)))
+			//								.sub(coefficientBridgeAtPayment.mult(interpolationModel.getBrownianBridge(liborStartIndex, paymentDate)));
+			//RandomVariableInterface test = adjustedNumeraireAtEnd.mult(paymentDate-fixingDate).invert().mult(model.getLIBOR(fixingDate, fixingDate, liborEndTime).mult(liborEndTime-fixingDate).add(1)
+			//		.sub(model.getLIBOR(paymentDate, paymentDate, liborEndTime).mult(liborEndTime-paymentDate).add(1).mult(1+strike*(paymentDate-fixingDate)) ) );
+			System.out.println("test: " + (Math.abs(bridgeVarianceAtFixing - test) / bridgeVarianceAtFixing)*100 + "%" );
+			System.out.println();
+			//end temp test 3
+		    
+		    
 			//Calculate needed Variables (complete covariance & residuelRandomVariable)
-			RandomVariableInterface	adjustedNumeraireAtEnd     = interpolationModel.getNumeraire(liborEndTimeFixing);
+			RandomVariableInterface	adjustedNumeraireAtEndFixing     = interpolationModel.getNumeraire(liborEndTimeFixing);
+			RandomVariableInterface	adjustedNumeraireAtEndPayment    = interpolationModel.getNumeraire(liborEndTimePayment);
+			
 			
 			double numeraireAdjustmentForFixing  = 1.0;
 			double numeraireAdjustmentForPayment = 1.0;
@@ -139,25 +197,27 @@ public class ColleteralOption extends AbstractLIBORMonteCarloProduct {
 				System.out.println(numeraireAdjustmentForFixing);
 			}*/
 			
-			
-			RandomVariableInterface logLiborOverPeriod         = interpolationModel.getLIBOR(interpolationModel.getTimeIndex(interpolationModel.getLiborPeriod(liborStartIndexFixing)), liborStartIndexFixing)
+			RandomVariableInterface logLiborOverPeriodFixing   = interpolationModel.getLIBOR(interpolationModel.getTimeIndex(liborStartTimeFixing), liborStartIndexFixing)
 																	.mult(liborEndTimeFixing - liborStartTimeFixing).add(1.0).log();
-			RandomVariableInterface fixingExpLiborOverPeriod   = logLiborOverPeriod.mult((liborEndTimeFixing-fixingDate)/(liborEndTimeFixing-liborStartTimeFixing)).exp();
-			RandomVariableInterface paymentExpLiborOverPeriod  = logLiborOverPeriod.mult((liborEndTimeFixing-paymentDate)/(liborEndTimeFixing-liborStartTimeFixing)).exp();
+			RandomVariableInterface logLiborOverPeriodPayment  = samePeriod ? logLiborOverPeriodFixing : interpolationModel.getLIBOR(interpolationModel.getTimeIndex(liborStartTimePayment), liborStartIndexPayment);
+															
+			RandomVariableInterface fixingExpLiborOverPeriod   = logLiborOverPeriodFixing.mult((liborEndTimeFixing-fixingDate)/(liborEndTimeFixing-liborStartTimeFixing)).exp();
+			RandomVariableInterface paymentExpLiborOverPeriod  = logLiborOverPeriodPayment.mult((liborEndTimePayment-paymentDate)/(liborEndTimePayment-liborStartTimePayment)).exp();
 
-			RandomVariableInterface coefficientBridgeAtFixing  = adjustedNumeraireAtEnd.mult((paymentDate - fixingDate) * numeraireAdjustmentForFixing).invert();
-			RandomVariableInterface coefficientBridgeAtPayment = adjustedNumeraireAtEnd.mult((paymentDate - fixingDate) * numeraireAdjustmentForPayment).div(1 + strike * (paymentDate - fixingDate)).invert();
-			
+			RandomVariableInterface coefficientBridgeAtFixing  = adjustedNumeraireAtEndFixing.mult((paymentDate - fixingDate) * numeraireAdjustmentForFixing).invert();
+			RandomVariableInterface coefficientBridgeAtPayment = adjustedNumeraireAtEndPayment.mult((paymentDate - fixingDate) * numeraireAdjustmentForPayment).div(1 + strike * (paymentDate - fixingDate)).invert();
 			
 			
 			//analytic ForwardCurve adjustment
 			if(interpolationModel.getForwardRateCurve() != null) {
 				double forwardCurveFixingEnd    = 1 + interpolationModel.getForwardRateCurve().getForward(interpolationModel.getAnalyticModel(), fixingDate, liborEndTimeFixing - fixingDate) * (liborEndTimeFixing - fixingDate);
-				double forwardCurvePaymentEnd   = 1 + interpolationModel.getForwardRateCurve().getForward(interpolationModel.getAnalyticModel(), paymentDate, liborEndTimeFixing - paymentDate) * (liborEndTimeFixing - paymentDate);
-				double forwardCurveLongPeriod   = 1 + interpolationModel.getForwardRateCurve().getForward(interpolationModel.getAnalyticModel(), liborStartTimeFixing, liborEndTimeFixing - liborStartTimeFixing) * (liborEndTimeFixing - liborStartTimeFixing);
-			
-				double forwardCurveFixingEndLog  = Math.exp(Math.log(forwardCurveLongPeriod)*(liborEndTimeFixing - fixingDate)/(liborEndTimeFixing - liborStartTimeFixing));
-				double forwardCurvePaymentEndLog = Math.exp(Math.log(forwardCurveLongPeriod)*(liborEndTimeFixing - paymentDate)/(liborEndTimeFixing - liborStartTimeFixing)); 
+				double forwardCurvePaymentEnd   = 1 + interpolationModel.getForwardRateCurve().getForward(interpolationModel.getAnalyticModel(), paymentDate, liborEndTimePayment - paymentDate) * (liborEndTimePayment - paymentDate);
+				double forwardCurveLongFixing   = 1 + interpolationModel.getForwardRateCurve().getForward(interpolationModel.getAnalyticModel(), liborStartTimeFixing, liborEndTimeFixing - liborStartTimeFixing) * (liborEndTimeFixing - liborStartTimeFixing);
+				double forwardCurveLongPayment  = samePeriod ? forwardCurveLongFixing : 
+													1 + interpolationModel.getForwardRateCurve().getForward(interpolationModel.getAnalyticModel(), liborStartTimePayment, liborEndTimePayment - liborStartTimePayment) * (liborEndTimePayment - liborStartTimePayment); 
+				
+				double forwardCurveFixingEndLog  = Math.exp(Math.log(forwardCurveLongFixing)*(liborEndTimeFixing - fixingDate)/(liborEndTimeFixing - liborStartTimeFixing));
+				double forwardCurvePaymentEndLog = Math.exp(Math.log(forwardCurveLongPayment)*(liborEndTimePayment - paymentDate)/(liborEndTimePayment - liborStartTimePayment)); 
 				
 				double forwardFixingAdjustment  = forwardCurveFixingEnd  / forwardCurveFixingEndLog;
 				double forwardPaymentAdjustment = forwardCurvePaymentEnd / forwardCurvePaymentEndLog;
@@ -168,12 +228,13 @@ public class ColleteralOption extends AbstractLIBORMonteCarloProduct {
 				paymentExpLiborOverPeriod  = paymentExpLiborOverPeriod.mult(forwardPaymentAdjustment);
 			}
 			
-			RandomVariableInterface completeVariance = coefficientBridgeAtFixing.pow(2.0).mult(bridgeVarianceAtFixing)
-					.add(coefficientBridgeAtPayment.pow(2.0).mult(bridgeVarianceAtPayment))
-					.sub(coefficientBridgeAtFixing.mult(coefficientBridgeAtPayment).mult(2*bridgeCovariance));
+			RandomVariableInterface completeVariance 	   = coefficientBridgeAtFixing.pow(2.0).mult(bridgeVarianceAtFixing)
+																.add(coefficientBridgeAtPayment.pow(2.0).mult(bridgeVarianceAtPayment));
+			if(!samePeriod) completeVariance = completeVariance.sub(coefficientBridgeAtFixing.mult(coefficientBridgeAtPayment).mult(2*bridgeCovariance));
 			
-			RandomVariableInterface residuelRandomVariable     = fixingExpLiborOverPeriod.div(numeraireAdjustmentForFixing).sub( paymentExpLiborOverPeriod.mult( (1 + strike * (paymentDate - fixingDate)) / numeraireAdjustmentForPayment))
-					.div(adjustedNumeraireAtEnd.mult(paymentDate - fixingDate));
+			RandomVariableInterface residuelRandomVariable = fixingExpLiborOverPeriod.div( adjustedNumeraireAtEndFixing.mult((paymentDate - fixingDate)*numeraireAdjustmentForFixing) )
+					.sub( paymentExpLiborOverPeriod.mult( (1 + strike * (paymentDate - fixingDate)) )
+					.div(adjustedNumeraireAtEndPayment.mult((paymentDate - fixingDate)*numeraireAdjustmentForPayment)) );
 
 			//end Calculate needed Variables
 			
@@ -204,8 +265,8 @@ public class ColleteralOption extends AbstractLIBORMonteCarloProduct {
 			
 			/*
 			//temp test:
-			double test = (interpolationModel.getBrownianBridge(liborStartIndex, fixingDate).mult(coefficientBridgeAtFixing.get(1)))
-							.sub(interpolationModel.getBrownianBridge(liborStartIndex, paymentDate).mult(coefficientBridgeAtPayment.get(1))).getVariance();
+			double test = (interpolationModel.getBrownianBridge(liborStartIndexFixing, fixingDate).mult(coefficientBridgeAtFixing.get(1)))
+							.sub(interpolationModel.getBrownianBridge(liborStartIndexPayment, paymentDate).mult(coefficientBridgeAtPayment.get(1))).getVariance();
 			//RandomVariableInterface test = residuelRandomVariable.add(coefficientBridgeAtFixing.mult(interpolationModel.getBrownianBridge(liborStartIndex, fixingDate)))
 			//								.sub(coefficientBridgeAtPayment.mult(interpolationModel.getBrownianBridge(liborStartIndex, paymentDate)));
 			//RandomVariableInterface test = adjustedNumeraireAtEnd.mult(paymentDate-fixingDate).invert().mult(model.getLIBOR(fixingDate, fixingDate, liborEndTime).mult(liborEndTime-fixingDate).add(1)
@@ -213,7 +274,8 @@ public class ColleteralOption extends AbstractLIBORMonteCarloProduct {
 			System.out.println("test: " + (Math.abs(completeVariance.get(1) - test) / completeVariance.get(1))*100 + "%" );
 			System.out.println();
 			//end temp test
-			*/						
+			*/
+			
 		} else {
 			RandomVariableInterface numeraireAtFixing  	  				= model.getNumeraire(fixingDate);
 			RandomVariableInterface numeraireAtPayment	 				= model.getNumeraire(paymentDate);
