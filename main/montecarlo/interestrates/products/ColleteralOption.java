@@ -178,8 +178,9 @@ public class ColleteralOption extends AbstractLIBORMonteCarloProduct {
 		    
 		    
 			//Calculate needed Variables (complete covariance & residuelRandomVariable)
-			RandomVariableInterface	adjustedNumeraireAtEndFixing     = interpolationModel.getNumeraire(liborEndTimeFixing);
-			RandomVariableInterface	adjustedNumeraireAtEndPayment    = interpolationModel.getNumeraire(liborEndTimePayment);
+			RandomVariableInterface	adjustedNumeraireAtEndFixing  = interpolationModel.getNumeraire(liborEndTimeFixing);
+			RandomVariableInterface	adjustedNumeraireAtEndPayment =  samePeriod ? adjustedNumeraireAtEndFixing : 
+																		interpolationModel.getNumeraire(liborEndTimePayment);
 			
 			
 			double numeraireAdjustmentForFixing  = 1.0;
@@ -199,7 +200,8 @@ public class ColleteralOption extends AbstractLIBORMonteCarloProduct {
 			
 			RandomVariableInterface logLiborOverPeriodFixing   = interpolationModel.getLIBOR(interpolationModel.getTimeIndex(liborStartTimeFixing), liborStartIndexFixing)
 																	.mult(liborEndTimeFixing - liborStartTimeFixing).add(1.0).log();
-			RandomVariableInterface logLiborOverPeriodPayment  = samePeriod ? logLiborOverPeriodFixing : interpolationModel.getLIBOR(interpolationModel.getTimeIndex(liborStartTimePayment), liborStartIndexPayment);
+			RandomVariableInterface logLiborOverPeriodPayment  = samePeriod ? logLiborOverPeriodFixing : interpolationModel.getLIBOR(interpolationModel.getTimeIndex(liborStartTimePayment), liborStartIndexPayment)
+																											.mult(liborEndTimePayment - liborStartTimePayment).add(1.0).log();
 															
 			RandomVariableInterface fixingExpLiborOverPeriod   = logLiborOverPeriodFixing.mult((liborEndTimeFixing-fixingDate)/(liborEndTimeFixing-liborStartTimeFixing)).exp();
 			RandomVariableInterface paymentExpLiborOverPeriod  = logLiborOverPeriodPayment.mult((liborEndTimePayment-paymentDate)/(liborEndTimePayment-liborStartTimePayment)).exp();
@@ -230,7 +232,7 @@ public class ColleteralOption extends AbstractLIBORMonteCarloProduct {
 			
 			RandomVariableInterface completeVariance 	   = coefficientBridgeAtFixing.pow(2.0).mult(bridgeVarianceAtFixing)
 																.add(coefficientBridgeAtPayment.pow(2.0).mult(bridgeVarianceAtPayment));
-			if(!samePeriod) completeVariance = completeVariance.sub(coefficientBridgeAtFixing.mult(coefficientBridgeAtPayment).mult(2*bridgeCovariance));
+			if(samePeriod) completeVariance = completeVariance.sub(coefficientBridgeAtFixing.mult(coefficientBridgeAtPayment).mult(2*bridgeCovariance));
 			
 			RandomVariableInterface residuelRandomVariable = fixingExpLiborOverPeriod.div( adjustedNumeraireAtEndFixing.mult((paymentDate - fixingDate)*numeraireAdjustmentForFixing) )
 					.sub( paymentExpLiborOverPeriod.mult( (1 + strike * (paymentDate - fixingDate)) )

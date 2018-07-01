@@ -54,8 +54,8 @@ public class AnalyticFormulaColleteralTest {
 		LMMBB.getNumeraire(LMMBB.getTime(LMMBB.getTimeDiscretization().getNumberOfTimeSteps()));
 		
 		double evaluationTime = 0.0;
-		double fixingDate     = 12.0;
-		double paymentDate    = 13.0;
+		double fixingDate     = 1.0;
+		double paymentDate    = 2.0;
 		double strike         = 0.02;
 		
 		//Non Analytic:
