@@ -268,7 +268,7 @@ public class LiborMarketModelWithBridgeInterpolation extends AbstractModel imple
 			/*
 			 * Adjust for discounting, i.e. funding or collateralization
 			 */
-			if(discountCurve != null && false) {
+			if(discountCurve != null) {
 				// This includes a control for zero bonds
 				double deterministicNumeraireAdjustment = numeraire.invert().getAverage() / discountCurve.getDiscountFactor(curveModel, time);
 				numeraire = numeraire.mult(deterministicNumeraireAdjustment);
@@ -341,7 +341,7 @@ public class LiborMarketModelWithBridgeInterpolation extends AbstractModel imple
 		/*
 		 * Adjust for discounting, i.e. funding or collateralization
 		 */
-		if(discountCurve != null && false) {
+		if(discountCurve != null ) {
 			// This includes a control for zero bonds
 			double deterministicNumeraireAdjustment = numeraire.invert().getAverage() / discountCurve.getDiscountFactor(curveModel, time);
 			numeraire = numeraire.mult(deterministicNumeraireAdjustment);
@@ -582,13 +582,13 @@ public class LiborMarketModelWithBridgeInterpolation extends AbstractModel imple
 		}
 		else { throw new UnsupportedOperationException("InterpolationScheme not supported!"); }
 		
-		if(getForwardRateCurve() != null && false) {
-			double analyticLibor				= getForwardRateCurve().getForward(getAnalyticModel(), previousLiborTime, shortPeriodLenght);
-			double analyticLiborShortPeriod		= getForwardRateCurve().getForward(getAnalyticModel(), previousLiborTime, periodLenght);
-			double analyticInterpolatedOnePlusLiborDt		= (1 + analyticLiborShortPeriod * periodLenght) / Math.exp(Math.log(1 + analyticLiborShortPeriod * periodLenght) * alpha);
-			double analyticOnePlusLiborDt					= (1 + analyticLibor * (processTime - previousLiborTime));
+		if(getForwardRateCurve() != null) {
+			double analyticLiborShortPeriod				= getForwardRateCurve().getForward(getAnalyticModel(), processTime, shortPeriodLenght);
+			double analyticLibor					 	= getForwardRateCurve().getForward(getAnalyticModel(), previousLiborTime, periodLenght);
+			double analyticInterpolatedOnePlusLiborDt		= Math.exp(Math.log(1 + analyticLibor * periodLenght) * alpha);
+			double analyticOnePlusLiborDt					= (1 + analyticLiborShortPeriod * (shortPeriodLenght));
 			double adjustment = analyticOnePlusLiborDt / analyticInterpolatedOnePlusLiborDt;
-			libor = libor.mult(shortPeriodLenght).add(1.0).div(adjustment).sub(1.0).div(shortPeriodLenght);
+			libor = libor.mult(shortPeriodLenght).add(1.0).mult(adjustment).sub(1.0).div(shortPeriodLenght);
 		}
 	
 		return libor;
