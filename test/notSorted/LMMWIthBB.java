@@ -1,4 +1,6 @@
 package notSorted;
+import java.io.OutputStream;
+import java.io.PrintStream;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -6,6 +8,7 @@ import montecarlo.interestrates.LiborMarketModelWithBridgeInterpolation;
 import montecarlo.interestrates.modelplugins.AbstractLiborCovarianceModelWithInterpolation;
 import montecarlo.interestrates.modelplugins.LiborCovarianceModelWithInterpolation;
 import net.finmath.exception.CalculationException;
+import net.finmath.marketdata.model.AnalyticModelInterface;
 import net.finmath.marketdata.model.curves.DiscountCurveFromForwardCurve;
 import net.finmath.marketdata.model.curves.ForwardCurve;
 import net.finmath.montecarlo.BrownianMotion;
@@ -13,6 +16,7 @@ import net.finmath.montecarlo.BrownianMotionInterface;
 import net.finmath.montecarlo.RandomVariable;
 import net.finmath.montecarlo.RandomVariableFactory;
 import net.finmath.montecarlo.interestrate.LIBORMarketModel;
+import net.finmath.montecarlo.interestrate.LIBORMarketModelCalibrationTest;
 import net.finmath.montecarlo.interestrate.LIBORMarketModelInterface;
 import net.finmath.montecarlo.interestrate.LIBORModelMonteCarloSimulation;
 import net.finmath.montecarlo.interestrate.modelplugins.LIBORCorrelationModelExponentialDecay;
@@ -21,6 +25,7 @@ import net.finmath.montecarlo.interestrate.modelplugins.LIBORVolatilityModel;
 import net.finmath.montecarlo.interestrate.modelplugins.LIBORVolatilityModelFourParameterExponentialForm;
 import net.finmath.montecarlo.interestrate.products.SimpleSwap;
 import net.finmath.montecarlo.process.ProcessEulerScheme;
+import net.finmath.optimizer.SolverException;
 import net.finmath.stochastic.RandomVariableInterface;
 import net.finmath.time.TimeDiscretization;
 
@@ -31,38 +36,42 @@ public class LMMWIthBB {
 	final static double lastTime	= 40.0;
 	final static double dt		= 0.5;
 	
-	public static void main(String[] args) throws CalculationException {
+	static AnalyticModelInterface staticAnalyticModel;
+	public static void main(String[] args) throws CalculationException, SolverException {
 		
-		LIBORModelMonteCarloSimulation LMMBB = createLIBORMarketModelWithBB(1000, 3, 0.1);
-		LIBORModelMonteCarloSimulation LMM = createLIBORMarketModel(1000, 3, 0.1);
-		
-		System.out.println(LMM.getLIBOR(10.0, 10.0, 20.0).get(3));
-		System.out.println();
+		staticAnalyticModel = getCurveModel();
+		LIBORModelMonteCarloSimulation LMMBB = createLIBORMarketModelWithBB(100000, 3, 0.1);
+		LIBORModelMonteCarloSimulation LMM = createLIBORMarketModel(100000, 3, 0.1);
 		
 		//Test 1:
-
+		System.out.println("Test 1 (interpolated Libor)");
 		for (int timeIndex = 20; timeIndex < 40; timeIndex++) {
-			System.out.println( ((LiborMarketModelWithBridgeInterpolation) LMMBB.getModel()).getInterpolatedLibor(0, timeIndex).get(15) + "\t" +
+			System.out.println( LMM.getTime(timeIndex) + "\t" + ((LiborMarketModelWithBridgeInterpolation) LMMBB.getModel()).getInterpolatedLibor(0, timeIndex).get(15) + "\t" +
 					LMM.getLIBOR(0.0, LMM.getTime(timeIndex), 20.0).get(15));
 		}
 		
 		
 		System.out.println();
-		System.out.println("Test 2");
 		//Test 2:
+		System.out.println("Test 2 (Numeraire)");
 		for (int timeIndex = 0; timeIndex < LMMBB.getTimeDiscretization().getNumberOfTimes(); timeIndex++) {
 			double time = LMMBB.getTime(timeIndex);
-			System.out.println( LMMBB.getNumeraire(time).get(15) + "\t" + LMM.getNumeraire(time).get(15));
+			System.out.println( timeIndex + "\t" + LMMBB.getNumeraire(time).get(15) + "\t" + LMM.getNumeraire(time).get(15));
 		}
 		System.out.println();
 		/*
+		//Test 3
 		System.out.println("Test 3");
 		for (int timeIndex = 0; timeIndex < LMMBB.getTimeDiscretization().getNumberOfTimes(); timeIndex++) {
 			double time = LMMBB.getTime(timeIndex);
 			System.out.println( LMMBB.getNumeraire(time).get(19) + "\t" + LMM.getNumeraire(time).get(19));
 		}
-		System.out.println();
+		*/
 		/*
+		System.out.println();
+		//Test 4
+		System.out.println("Test4:");
+		
 		for (int timeIndex = 0; timeIndex < LMM.getTimeDiscretization().getNumberOfTimeSteps(); timeIndex++) {
 			
 			double[] fixingDates = {LMM.getTime(timeIndex)};
@@ -74,10 +83,17 @@ public class LMMWIthBB {
 			
 		}*/
 		
+		System.out.println();
+		//Test5
+		System.out.println("Test5");
+		System.out.println(LMMBB.getNumeraire(20.0).getAverage());
+		System.out.println( ((LiborMarketModelWithBridgeInterpolation) (LMMBB.getModel())).getUnAdjustedNumeraire(20.0).getAverage());
+		
+		System.exit(0);
 	}
 	
 	public static LIBORModelMonteCarloSimulation createLIBORMarketModelWithBB(
-			int numberOfPaths, int numberOfFactors, double correlationDecayParam) throws CalculationException {
+			int numberOfPaths, int numberOfFactors, double correlationDecayParam) throws CalculationException, SolverException {
 
 		/*
 		 * Create the libor tenor structure and the initial values
@@ -86,12 +102,26 @@ public class LMMWIthBB {
 		TimeDiscretization liborPeriodDiscretization = new TimeDiscretization(0.0, (int) (liborRateTimeHorzion / liborPeriodLength), liborPeriodLength);
 
 		// Create the forward curve (initial value of the LIBOR market liborModel)
-		ForwardCurve forwardCurve = ForwardCurve.createForwardCurveFromForwards(
-				"forwardCurve"								/* name of the curve */,
-				new double[] {0.5 , 1.0 , 2.0 , 5.0 , 40.0}	/* fixings of the forward */,
-				new double[] {0.05, 0.05, 0.05, 0.05, 0.05}	/* forwards */,
-				liborPeriodLength							/* tenor / period length */
-				);
+		net.finmath.marketdata.model.curves.ForwardCurveInterface forwardCurve;
+		net.finmath.marketdata.model.curves.DiscountCurveInterface discountCurve;
+		AnalyticModelInterface analyticModel = null;
+		if(false) {
+			 forwardCurve = ForwardCurve.createForwardCurveFromForwards(
+					"forwardCurve"								/* name of the curve */,
+					new double[] {0.5 , 1.0 , 2.0 , 5.0 , 40.0}	/* fixings of the forward */,
+					new double[] {0.05, 0.05, 0.05, 0.05, 0.05}	/* forwards */,
+					liborPeriodLength							/* tenor / period length */
+					);
+			discountCurve = new DiscountCurveFromForwardCurve(forwardCurve);
+		} else {
+			analyticModel = staticAnalyticModel;
+			String forwardCurveName  = "ForwardCurveFromDiscountCurve(discountCurve-EUR,6M)";
+			String discountCurveName = "discountCurve-EUR";
+			
+			forwardCurve =  analyticModel.getForwardCurve(forwardCurveName);
+			discountCurve =  analyticModel.getDiscountCurve(discountCurveName);
+			discountCurve = new DiscountCurveFromForwardCurve(forwardCurve);
+		}
 
 		/*
 		 * Create a simulation time discretization
@@ -153,7 +183,8 @@ public class LMMWIthBB {
 		 */
 		BrownianMotionInterface interpolationDriver = new BrownianMotion(timeDiscretization, 1, numberOfPaths, 412421);
 		
-		LIBORMarketModelInterface liborMarketModel = new LiborMarketModelWithBridgeInterpolation(liborPeriodDiscretization, null, forwardCurve, new DiscountCurveFromForwardCurve(forwardCurve), new RandomVariableFactory(), covarianceModel, calibrationItems, properties, interpolationDriver);
+		LIBORMarketModelInterface liborMarketModel = new LiborMarketModelWithBridgeInterpolation(liborPeriodDiscretization, 
+				analyticModel, forwardCurve, discountCurve, new RandomVariableFactory(), covarianceModel, calibrationItems, properties, interpolationDriver);
 
 		
 		BrownianMotionInterface brownianMotion = new net.finmath.montecarlo.BrownianMotion(timeDiscretization, numberOfFactors, numberOfPaths, 3141);
@@ -164,7 +195,7 @@ public class LMMWIthBB {
 	}
 	
 	public static LIBORModelMonteCarloSimulation createLIBORMarketModel(
-			int numberOfPaths, int numberOfFactors, double correlationDecayParam) throws CalculationException {
+			int numberOfPaths, int numberOfFactors, double correlationDecayParam) throws CalculationException, SolverException {
 
 		/*
 		 * Create the libor tenor structure and the initial values
@@ -173,13 +204,26 @@ public class LMMWIthBB {
 		TimeDiscretization liborPeriodDiscretization = new TimeDiscretization(0.0, (int) (liborRateTimeHorzion / liborPeriodLength), liborPeriodLength);
 
 		// Create the forward curve (initial value of the LIBOR market liborModel)
-		ForwardCurve forwardCurve = ForwardCurve.createForwardCurveFromForwards(
-				"forwardCurve"								/* name of the curve */,
-				new double[] {0.5 , 1.0 , 2.0 , 5.0 , 40.0}	/* fixings of the forward */,
-				new double[] {0.05, 0.05, 0.05, 0.05, 0.05}	/* forwards */,
-				liborPeriodLength							/* tenor / period length */
-				);
-
+		net.finmath.marketdata.model.curves.ForwardCurveInterface forwardCurve;
+		net.finmath.marketdata.model.curves.DiscountCurveInterface discountCurve;
+		AnalyticModelInterface analyticModel = null;
+		if(false) {
+			 forwardCurve = ForwardCurve.createForwardCurveFromForwards(
+					"forwardCurve"								/* name of the curve */,
+					new double[] {0.5 , 1.0 , 2.0 , 5.0 , 40.0}	/* fixings of the forward */,
+					new double[] {0.05, 0.05, 0.05, 0.05, 0.05}	/* forwards */,
+					liborPeriodLength							/* tenor / period length */
+					);
+			discountCurve = new DiscountCurveFromForwardCurve(forwardCurve);
+		} else {
+			analyticModel = staticAnalyticModel;
+			String forwardCurveName  = "ForwardCurveFromDiscountCurve(discountCurve-EUR,6M)";
+			String discountCurveName = "discountCurve-EUR";
+			
+			forwardCurve =  analyticModel.getForwardCurve(forwardCurveName);
+			discountCurve =  analyticModel.getDiscountCurve(discountCurveName);
+			discountCurve = new DiscountCurveFromForwardCurve(forwardCurve);
+		}
 		/*
 		 * Create a simulation time discretization
 		 */
@@ -226,7 +270,8 @@ public class LMMWIthBB {
 		/*
 		 * Create corresponding LIBOR Market Model
 		 */
-		LIBORMarketModelInterface liborMarketModel = new LIBORMarketModel(liborPeriodDiscretization, null, forwardCurve, new DiscountCurveFromForwardCurve(forwardCurve), covarianceModel, calibrationItems, properties);
+		LIBORMarketModelInterface liborMarketModel = new LIBORMarketModel(liborPeriodDiscretization, analyticModel, forwardCurve,
+				discountCurve, covarianceModel, calibrationItems, properties);
 
 				
 		
@@ -235,6 +280,25 @@ public class LMMWIthBB {
 		ProcessEulerScheme process = new ProcessEulerScheme(brownianMotion, ProcessEulerScheme.Scheme.EULER);
 
 		return new LIBORModelMonteCarloSimulation(liborMarketModel, process);
+	}
+	
+	
+	public static AnalyticModelInterface getCurveModel() throws SolverException {
+		PrintStream originalStream = System.out;
+
+		PrintStream dummyStream = new PrintStream(new OutputStream(){
+		    public void write(int b) {
+		        // NO-OP
+		    }
+		});
+		System.setOut(dummyStream);
+		
+		LIBORMarketModelCalibrationTest lmmCalTest = new LIBORMarketModelCalibrationTest();
+		AnalyticModelInterface analyticModel = lmmCalTest.getCalibratedCurve();
+		
+		System.setOut(originalStream);
+		
+		return analyticModel;		
 	}
 }
 

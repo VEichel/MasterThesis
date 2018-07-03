@@ -268,7 +268,7 @@ public class LiborMarketModelWithBridgeInterpolation extends AbstractModel imple
 			/*
 			 * Adjust for discounting, i.e. funding or collateralization
 			 */
-			if(discountCurve != null) {
+			if(discountCurve != null && false) {
 				// This includes a control for zero bonds
 				double deterministicNumeraireAdjustment = numeraire.invert().getAverage() / discountCurve.getDiscountFactor(curveModel, time);
 				numeraire = numeraire.mult(deterministicNumeraireAdjustment);
@@ -341,7 +341,7 @@ public class LiborMarketModelWithBridgeInterpolation extends AbstractModel imple
 		/*
 		 * Adjust for discounting, i.e. funding or collateralization
 		 */
-		if(discountCurve != null ) {
+		if(discountCurve != null && false) {
 			// This includes a control for zero bonds
 			double deterministicNumeraireAdjustment = numeraire.invert().getAverage() / discountCurve.getDiscountFactor(curveModel, time);
 			numeraire = numeraire.mult(deterministicNumeraireAdjustment);
@@ -354,8 +354,7 @@ public class LiborMarketModelWithBridgeInterpolation extends AbstractModel imple
 	public RandomVariableInterface[] getInitialState() {
 		double[] liborInitialStates = new double[liborPeriodDiscretization.getNumberOfTimeSteps()];
 		for(int timeIndex=0; timeIndex<liborPeriodDiscretization.getNumberOfTimeSteps(); timeIndex++) {
-			//			double rate = forwardRateCurve.getForward(curveModel, liborPeriodDiscretization.getTime(timeIndex), liborPeriodDiscretization.getTimeStep(timeIndex));
-			double rate = forwardRateCurve.getForward(curveModel, liborPeriodDiscretization.getTime(timeIndex));
+			double rate = forwardRateCurve.getForward(curveModel, liborPeriodDiscretization.getTime(timeIndex), liborPeriodDiscretization.getTimeStep(timeIndex));
 			liborInitialStates[timeIndex] = (stateSpace == StateSpace.LOGNORMAL) ? Math.log(Math.max(rate,0)) : rate;
 		}
 
@@ -574,7 +573,7 @@ public class LiborMarketModelWithBridgeInterpolation extends AbstractModel imple
 		RandomVariableInterface bridge		= getBrownianBridge(previousLiborIndex, processTime);
 		RandomVariableInterface libor;
 		if(interpolationScheme == InterpolationScheme.LINEAR) {
-			libor = startLibor.mult(periodLenght).add(1.0).mult(alpha).add(1-alpha).add(bridge.mult(evaluationTimeScalingFactor)).sub(1.0).div(shortPeriodLenght);
+			libor = startLibor.mult(periodLenght).add(1.0).mult(alpha).add(1-alpha).mult(bridge.mult(evaluationTimeScalingFactor)).sub(1.0).div(shortPeriodLenght);
 		}
 		
 		if(interpolationScheme == InterpolationScheme.LOGLINEAR) {
@@ -582,7 +581,7 @@ public class LiborMarketModelWithBridgeInterpolation extends AbstractModel imple
 		}
 		else { throw new UnsupportedOperationException("InterpolationScheme not supported!"); }
 		
-		if(getForwardRateCurve() != null) {
+		if(getForwardRateCurve() != null && false) {
 			double analyticLiborShortPeriod				= getForwardRateCurve().getForward(getAnalyticModel(), processTime, shortPeriodLenght);
 			double analyticLibor					 	= getForwardRateCurve().getForward(getAnalyticModel(), previousLiborTime, periodLenght);
 			double analyticInterpolatedOnePlusLiborDt		= Math.exp(Math.log(1 + analyticLibor * periodLenght) * alpha);
@@ -836,6 +835,19 @@ public class LiborMarketModelWithBridgeInterpolation extends AbstractModel imple
 	@Override
 	public AbstractLIBORCovarianceModel getCovarianceModel() {
 		return covarianceModel;
+	}
+	
+	public RandomVariableInterface getUnAdjustedNumeraire(double time) throws CalculationException {
+		int liborTimeIndex = getLiborPeriodIndex(time);
+		if(liborTimeIndex < 0) {
+			throw new UnsupportedOperationException("Unadjusted Numeraire only available for Tenortimes. Requested " + time + " not supported!" );
+		}
+		RandomVariableInterface unAdjustedNumeraire = numeraires.get(liborTimeIndex);
+		if(unAdjustedNumeraire == null) {
+			getNumeraire(time);
+			unAdjustedNumeraire = numeraires.get(liborTimeIndex);
+		}
+		return unAdjustedNumeraire;
 	}
 }
 	

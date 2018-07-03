@@ -5,7 +5,11 @@ import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 import java.util.Locale;
 
+import org.apache.commons.math3.analysis.UnivariateFunction;
+import org.apache.commons.math3.analysis.integration.SimpsonIntegrator;
+import org.apache.commons.math3.analysis.integration.TrapezoidIntegrator;
 import org.apache.commons.math3.distribution.NormalDistribution;
+import org.apache.commons.math3.special.Erf;
 
 import montecarlo.interestrates.BrownianBridgeWithVariance;
 import net.finmath.montecarlo.BrownianBridge;
@@ -18,6 +22,8 @@ import net.finmath.time.TimeDiscretizationInterface;
 
 public class BrownianBridgePaths {
 
+	static int seed = 13412;
+	
 	private static DecimalFormat formatterValue		= new DecimalFormat(" ##0.000;-##0.000", new DecimalFormatSymbols(Locale.ENGLISH));
 	private static int path = 0;
 	
@@ -27,10 +33,10 @@ public class BrownianBridgePaths {
 		
 		RandomVariableInterface start = new RandomVariable(0.0);
 		RandomVariableInterface end   = new RandomVariable(0.0);
-		int numberOfPaths = 1000;
+		int numberOfPaths = 100000;
 		TimeDiscretizationInterface timeDiscretization = new TimeDiscretization(10, 100, 0.1);
-		BrownianMotion standardMotion = new BrownianMotion(timeDiscretization, 1, numberOfPaths, 12234);
-		BrownianBridge standardBridge = new BrownianBridge(timeDiscretization, numberOfPaths, /* seed */ 12234, start, end);
+		BrownianMotion standardMotion = new BrownianMotion(timeDiscretization, 1, numberOfPaths, seed);
+		BrownianBridge standardBridge = new BrownianBridge(timeDiscretization, numberOfPaths, seed, start, end);
 		
 		RandomVariableInterface[] variances = new RandomVariableInterface[timeDiscretization.getNumberOfTimeSteps()];
 		for (int i = 0; i < variances.length; i++) {
@@ -48,7 +54,7 @@ public class BrownianBridgePaths {
 		}
 		
 		int n = 20;
-		int m = 80;
+		int m = 30;
 		System.out.println("Variance: ");
 		System.out.println(bridgeValue[2].getVariance());
 		System.out.println("with extra: " + bridgeValueWithVariance[n].getVariance());
@@ -137,6 +143,7 @@ public class BrownianBridgePaths {
 		
 		System.out.println();
 		
+		/*
 		long startTime12 = System.currentTimeMillis();
 		double result = 0;
 		for(int temp =0; temp<100000; temp++) {
@@ -144,6 +151,7 @@ public class BrownianBridgePaths {
 			result = nv.density(10.2);
 		}
 		System.out.println(result + "      " + (System.currentTimeMillis() - startTime12));
+		*/
 		/*
 		getArray(standardBridge);
 		
@@ -168,17 +176,41 @@ public class BrownianBridgePaths {
 		for (int i = 0; i < numberOfPaths && i<10000; i++) {
 			System.out.println(bridgeValueWithVariance[4].get(i));
 		}*/
-		double floor = -0.5;
-		double variance = 2.0;
+		double residuelVariable =  -0.006473509461259366;
+		double varianceVariable = 0.01873444531509433;
 		System.out.println();
 		System.out.println();
-		NormalDistribution nd = new NormalDistribution(0.0, Math.sqrt(variance));
-		double cumulative = nd.cumulativeProbability(floor);
-		System.out.println(cumulative*floor+variance * nd.density(floor));
-		TimeDiscretization timeDiscretization2 = new TimeDiscretization(0, 10, variance);
-		BrownianMotion bm = new BrownianMotion(timeDiscretization2, 1, 100000, 1243);
+		System.out.println("Test6");
+		NormalDistribution nd = new NormalDistribution(0.0, Math.sqrt(varianceVariable));
+		double cumulative = nd.cumulativeProbability(residuelVariable);
+		
+		TrapezoidIntegrator integrator = new TrapezoidIntegrator();
+		
+		UnivariateFunction f = new UnivariateFunction() {
+			
+			public double value(double x)
+			{
+				return nd.cumulativeProbability(x);
+			}
+		};
+		/*double firstPart =  integrator.integrate(1000000000, f, -500000, -residuelVariable);
+		System.out.println(firstPart  + residuelVariable );*/
+		
+		
+		double erf = Erf.erf(residuelVariable / Math.sqrt(2 * varianceVariable)); 
+		double lt  = 0.5 * residuelVariable * (erf - 1) 
+					+ Math.sqrt(varianceVariable / (2 * Math.PI)) * Math.exp(- residuelVariable * residuelVariable / (2 * varianceVariable)); 
+		
+		double erf2 = 2*cumulative - 1;
+		double e   = Math.exp((residuelVariable*residuelVariable)/ (2*varianceVariable));
+		//double lt  = (Math.PI * residuelVariable * e * erf - Math.PI * residuelVariable * e + Math.sqrt(2 * Math.PI * varianceVariable)) / (e * 2 * Math.PI);
+		
+		System.out.println(lt +  residuelVariable);
+		TimeDiscretization timeDiscretization2 = new TimeDiscretization(0, 10, varianceVariable);
+		BrownianMotion bm = new BrownianMotion(timeDiscretization2, 1, 10000000, 1222143);
 		RandomVariableInterface nv = bm.getBrownianIncrement(0, 0);
-		System.out.println(nv.floor(floor).getAverage());
+		
+		System.out.println(nv.apply(x -> x>-residuelVariable ? residuelVariable + x : 0.0).getAverage());
 	}
 
 	 
