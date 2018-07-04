@@ -573,7 +573,7 @@ public class LiborMarketModelWithBridgeInterpolation extends AbstractModel imple
 		RandomVariableInterface bridge		= getBrownianBridge(previousLiborIndex, processTime);
 		RandomVariableInterface libor;
 		if(interpolationScheme == InterpolationScheme.LINEAR) {
-			libor = startLibor.mult(periodLenght).add(1.0).mult(alpha).add(1-alpha).mult(bridge.mult(evaluationTimeScalingFactor)).sub(1.0).div(shortPeriodLenght);
+			libor = startLibor.mult(periodLenght).add(1.0).mult(alpha).add(1-alpha).add(bridge.mult(evaluationTimeScalingFactor)).sub(1.0).div(shortPeriodLenght);
 		}
 		
 		if(interpolationScheme == InterpolationScheme.LOGLINEAR) {

@@ -89,6 +89,8 @@ public class AnalyticFormulaColleteralTest {
 		long afterOldAnalyticMillis = System.currentTimeMillis();
 		System.out.println("OldAnalytic: "  + colleteralOldAnalyticPrice);
 		
+		System.out.println("LMMBB: " + LMMBB.getNumeraire(13.0));
+		System.out.println(LMMBB.getLIBOR(13.0, 13.0, 14.0).size());
 		
 		//printOuts:
 		System.out.println("NonAnalyticPrice:\t" + colleteralNonAnalyticPrice);
@@ -97,8 +99,7 @@ public class AnalyticFormulaColleteralTest {
 		System.out.println("NonAnalytic Computation Time: " + (afterNonAnalyticMillis - beforeNonAnalyticMillis) + "ms");
 		System.out.println("   Analytic Computation Time: " + (afterAnalyticMillis - beforeAnalyticMillis) + "ms");
 
-		
-		System.out.println(colleteralOptionNonAnalytic.getValue(evaluationTime, LMMBB) + "\t" + colleteralOptionAnalytic.getValue(evaluationTime, LMMBB));
+		/*System.out.println(colleteralOptionNonAnalytic.getValue(evaluationTime, LMMBB) + "\t" + colleteralOptionAnalytic.getValue(evaluationTime, LMMBB));*/
 	}
 	
 	

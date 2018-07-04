@@ -219,8 +219,11 @@ public class ColleteralOption extends AbstractLIBORMonteCarloProduct {
 			}
 			//end multi curve adjustment
 			
-			RandomVariableInterface coefficientBridgeAtFixing  = numeraireAtEndFixing.mult(paymentDate - fixingDate).invert();
+			/*RandomVariableInterface coefficientBridgeAtFixing  = numeraireAtEndFixing.mult(paymentDate - fixingDate).invert();
 			RandomVariableInterface coefficientBridgeAtPayment = numeraireAtEndPayment.mult(paymentDate - fixingDate).div(1 + strike * (paymentDate - fixingDate)).invert();
+			*/
+			double coefficientBridgeAtFixing  =  1 / (paymentDate - fixingDate);
+			double coefficientBridgeAtPayment =  (1 + strike * (paymentDate - fixingDate)) / (paymentDate - fixingDate);
 			
 			//analytic ForwardCurve adjustment
 			if(interpolationModel.getForwardRateCurve() != null && false) {
@@ -238,29 +241,29 @@ public class ColleteralOption extends AbstractLIBORMonteCarloProduct {
 				
 				if(!fixingDateOnLiborStart) {
 					fixingExpLiborOverPeriod    = fixingExpLiborOverPeriod.mult(forwardFixingAdjustment);
-					coefficientBridgeAtFixing   = coefficientBridgeAtFixing.mult(forwardFixingAdjustment);
+					coefficientBridgeAtFixing   = coefficientBridgeAtFixing * forwardFixingAdjustment;
 				}
 				if(!paymentDateOnLiborStart) {
-					coefficientBridgeAtPayment  = coefficientBridgeAtPayment.mult(forwardPaymentAdjustment);
+					coefficientBridgeAtPayment  = coefficientBridgeAtPayment * forwardPaymentAdjustment;
 					paymentExpLiborOverPeriod   = paymentExpLiborOverPeriod.mult(forwardPaymentAdjustment);	
 				}	
 			}
 			//end analytic ForwardCurve adjustment
 			
-			RandomVariableInterface completeVariance;
+			double completeVariance;
 			if(fixingDateOnLiborStart) {
-				completeVariance = coefficientBridgeAtPayment.pow(2.0).mult(bridgeVarianceAtPayment);
+				completeVariance = coefficientBridgeAtPayment * coefficientBridgeAtPayment * bridgeVarianceAtPayment;
 			} else if(paymentDateOnLiborStart) {
-				completeVariance = coefficientBridgeAtFixing.pow(2.0).mult(bridgeVarianceAtFixing);		
+				completeVariance = coefficientBridgeAtFixing * coefficientBridgeAtFixing * bridgeVarianceAtFixing;		
 			} else {
-				completeVariance = coefficientBridgeAtFixing.pow(2.0).mult(bridgeVarianceAtFixing)
-						.add(coefficientBridgeAtPayment.pow(2.0).mult(bridgeVarianceAtPayment));
-				if(samePeriod) completeVariance = completeVariance.sub(coefficientBridgeAtFixing.mult(coefficientBridgeAtPayment).mult(2*bridgeCovariance));
+				completeVariance = coefficientBridgeAtFixing * coefficientBridgeAtFixing * bridgeVarianceAtFixing
+						 + coefficientBridgeAtPayment * coefficientBridgeAtPayment * bridgeVarianceAtPayment ;
+				if(samePeriod) completeVariance = completeVariance - coefficientBridgeAtFixing * coefficientBridgeAtPayment * 2 * bridgeCovariance ;
 			}
 			
-			RandomVariableInterface residuelRandomVariable = fixingExpLiborOverPeriod.div( numeraireAtEndFixing.mult(paymentDate - fixingDate) )
-					.sub( paymentExpLiborOverPeriod.mult( (1 + strike * (paymentDate - fixingDate)) )
-					.div(numeraireAtEndPayment.mult(paymentDate - fixingDate)) );
+			RandomVariableInterface residuelRandomVariable = fixingExpLiborOverPeriod
+					.sub( paymentExpLiborOverPeriod.mult( (1 + strike * (paymentDate - fixingDate))) )
+					.div(paymentDate - fixingDate);
 
 			//end Calculate needed Variables
 			
@@ -271,7 +274,7 @@ public class ColleteralOption extends AbstractLIBORMonteCarloProduct {
 			double[] doubleValues = new double[residuelRandomVariable.size()];
 			for (int pathIndex = 0; pathIndex < doubleValues.length; pathIndex++) {
 				double residuelVariable = residuelRandomVariable.get(pathIndex);
-				double varianceVariable = completeVariance.get(pathIndex);
+				double varianceVariable = completeVariance;
 				//TODO: Tritt fall ein?
 				if(varianceVariable>0) {
 					double erf = Erf.erf(residuelVariable / Math.sqrt(2 * varianceVariable)); 
@@ -282,7 +285,7 @@ public class ColleteralOption extends AbstractLIBORMonteCarloProduct {
 					doubleValues[pathIndex] = ((- residuelVariable) < 0) ?  residuelVariable : 0.0;
 				}
 			}
-			values = new RandomVariable(evaluationTime, doubleValues);
+			values = new RandomVariable(evaluationTime, doubleValues).div(numeraireAtEndFixing);
 			/*temp*/ System.out.println("Time for cumulative Distribution Part in Analytic Formula: " + (System.currentTimeMillis() - start) + "ms");
 			
 			
@@ -298,15 +301,19 @@ public class ColleteralOption extends AbstractLIBORMonteCarloProduct {
 			double[] test8Array = new double[residuelRandomVariable.size()];
 			double test8 = 0.0;
 			for (int i = 0; i < test8Array.length; i++) {
-				test8Array[i] = interpolationModel.getBrownianBridge(liborStartIndexFixing, fixingDate).mult(coefficientBridgeAtFixing.mult(numeraireAtEndFixing))
-						   .sub(interpolationModel.getBrownianBridge(liborStartIndexPayment, paymentDate).mult(coefficientBridgeAtPayment.mult(numeraireAtEndFixing)))
-								   .add(numeraireAtEndFixing.mult(residuelRandomVariable).get(i)).floor(0.0).getAverage();
+				test8Array[i] = interpolationModel.getBrownianBridge(liborStartIndexFixing, fixingDate).mult(coefficientBridgeAtFixing)
+						   .sub(interpolationModel.getBrownianBridge(liborStartIndexPayment, paymentDate).mult(coefficientBridgeAtPayment))
+								   .add(residuelRandomVariable.get(i)).floor(0.0).getAverage();
 				test8 += test8Array[i] / numeraireAtEndFixing.get(i);
 			}
 			System.out.println("test8: " + test8 / test8Array.length);
+			System.out.println(values.getAverage());
 			System.out.println(interpolationModel.getBrownianBridge(liborStartIndexFixing, fixingDate).mult(coefficientBridgeAtFixing)
 					   .sub(interpolationModel.getBrownianBridge(liborStartIndexPayment, paymentDate).mult(coefficientBridgeAtPayment))
-							   .add(residuelRandomVariable).floor(0.0).getAverage());
+							   .add(residuelRandomVariable).floor(0.0).div(numeraireAtEndFixing).getAverage());
+			/*values = interpolationModel.getBrownianBridge(liborStartIndexFixing, fixingDate).mult(coefficientBridgeAtFixing)
+					   .sub(interpolationModel.getBrownianBridge(liborStartIndexPayment, paymentDate).mult(coefficientBridgeAtPayment))
+					   .add(residuelRandomVariable).floor(0.0).div(numeraireAtEndFixing);*/
 			/*
 			//temp test 6 (residuel)
 			RandomVariableInterface liborT1 = interpolationModel.getLIBOR(fixingDate, fixingDate, liborEndTimeFixing).mult(liborEndTimePayment - fixingDate).add(1.0).sub(interpolationModel.getBrownianBridge(liborStartIndexFixing, fixingDate));
