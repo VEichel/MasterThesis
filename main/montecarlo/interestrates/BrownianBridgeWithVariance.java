@@ -100,10 +100,10 @@ public class BrownianBridgeWithVariance implements BrownianMotionInterface {
 
 				// Calculate the next point using the "scheme" of the Brownian bridge
 				RandomVariableInterface nextRealization = brownianBridge.mult(1.0-alpha).add(generator.getBrownianIncrement(generatorTimeIndex, factor)
-						/*.mult(variances[timeIndex].sqrt())*/.mult(Math.sqrt(1-alpha)));
+						.mult(variances[timeIndex].sqrt()).mult(Math.sqrt(1.0-alpha)));
 				
 				// Store the increment
-				brownianIncrements[timeIndex][factor] = nextRealization.sub(brownianBridge).mult(variances[timeIndex].sqrt());
+				brownianIncrements[timeIndex][factor] = nextRealization.sub(brownianBridge);
 				
 				// Update the bridge to the current point
 				brownianBridge = nextRealization;

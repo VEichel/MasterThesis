@@ -5,7 +5,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
 
-import montecarlo.interestrates.LiborMarketModelWithBridgeInterpolation;
+import montecarlo.interestrates.LIBORMarketModelWithBridge;
 import montecarlo.interestrates.modelplugins.AbstractLiborCovarianceModelWithInterpolation;
 import montecarlo.interestrates.modelplugins.LiborCovarianceModelWithInterpolation;
 import montecarlo.interestrates.modelplugins.LiborCovarianceModelWithInterpolation.EvaluationTimeScalingScheme;
@@ -34,7 +34,7 @@ import net.finmath.time.TimeDiscretization;
 
 public class LMMWIthBB {
 
-	final static int    path = 10;
+	final static int    path = 12;
 	final static double liborPeriodLength	= 10;
 	final static double liborRateTimeHorzion	= 40.0;
 	final static double lastTime	= 40.0;
@@ -50,8 +50,9 @@ public class LMMWIthBB {
 		//Test 1:
 		System.out.println("Test 1 (interpolated Libor)");
 		for (int timeIndex = 20; timeIndex < 40; timeIndex++) {
-			System.out.println( LMM.getTime(timeIndex) + "\t" + ((LiborMarketModelWithBridgeInterpolation) LMMBB.getModel()).getInterpolatedLibor(0, timeIndex).get(path) + "\t" +
+			System.out.println( LMM.getTime(timeIndex) + "\t" + ((LIBORMarketModelWithBridge) LMMBB.getModel()).getInterpolatedLibor(timeIndex, timeIndex).get(path) + "\t" +
 					LMM.getLIBOR(0.0, LMM.getTime(timeIndex), 20.0).get(path));
+			System.out.println("drunter: " + LMMBB.getNumeraire(20.0).div(LMMBB.getNumeraire(LMM.getTime(timeIndex))).sub(1.0).div(20.0 - LMM.getTime(timeIndex)).get(path));
 		}
 		
 		
@@ -92,8 +93,15 @@ public class LMMWIthBB {
 		//Test5
 		System.out.println("Test5");
 		System.out.println(LMMBB.getNumeraire(20.0).getAverage());
-		System.out.println( ((LiborMarketModelWithBridgeInterpolation) (LMMBB.getModel())).getUnAdjustedNumeraire(20.0).getAverage());
+		System.out.println( ((LIBORMarketModelWithBridge) (LMMBB.getModel())).getUnAdjustedNumeraire(20.0).getAverage());
 		*/
+		
+		double varia = 0.0;
+		for (int i = 0; i < 20; i++) {
+			varia = ((LIBORMarketModelWithBridge)LMMBB.getModel()).getBrownianBridge(0, 0.5*i ).get(path);
+			System.out.println(varia);
+		}
+		
 		System.exit(0);
 	}
 	
@@ -180,7 +188,7 @@ public class LMMWIthBB {
 		double[] interpolationParameters = new double[timeDiscretization.getNumberOfTimeSteps()];
 		for (int i = 0; i < interpolationParameters.length; i++) {
 			
-			interpolationParameters[i] = random.nextDouble()/100.0 + 0.02;
+			interpolationParameters[i] = 0.01*i;
 		}
 		
 		double[] evaluationTimeScalingParameters = new double[timeDiscretization.getNumberOfTimeSteps()];
@@ -197,7 +205,7 @@ public class LMMWIthBB {
 		 */
 		BrownianMotionInterface interpolationDriver = new BrownianMotion(timeDiscretization, 1, numberOfPaths, 197123);
 		
-		LIBORMarketModelInterface liborMarketModel = new LiborMarketModelWithBridgeInterpolation(liborPeriodDiscretization, 
+		LIBORMarketModelInterface liborMarketModel = new LIBORMarketModelWithBridge(liborPeriodDiscretization, 
 				analyticModel, forwardCurve, discountCurve, new RandomVariableFactory(), covarianceModel, calibrationItems, properties, interpolationDriver);
 
 		

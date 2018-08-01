@@ -6,7 +6,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
 
-import montecarlo.interestrates.LiborMarketModelWithBridgeInterpolation;
+import montecarlo.interestrates.LIBORMarketModelWithBridge;
 import montecarlo.interestrates.modelplugins.AbstractLiborCovarianceModelWithInterpolation;
 import montecarlo.interestrates.modelplugins.LiborCovarianceModelWithInterpolation;
 import montecarlo.interestrates.modelplugins.LiborCovarianceModelWithInterpolation.EvaluationTimeScalingScheme;
@@ -26,6 +26,7 @@ import net.finmath.montecarlo.interestrate.LIBORMarketModel;
 import net.finmath.montecarlo.interestrate.LIBORMarketModelCalibrationTest;
 import net.finmath.montecarlo.interestrate.LIBORMarketModelInterface;
 import net.finmath.montecarlo.interestrate.LIBORModelMonteCarloSimulation;
+import net.finmath.montecarlo.interestrate.modelplugins.BlendedLocalVolatilityModel;
 import net.finmath.montecarlo.interestrate.modelplugins.LIBORCorrelationModelExponentialDecay;
 import net.finmath.montecarlo.interestrate.modelplugins.LIBORCovarianceModelFromVolatilityAndCorrelation;
 import net.finmath.montecarlo.interestrate.modelplugins.LIBORVolatilityModel;
@@ -37,7 +38,7 @@ import net.finmath.time.TimeDiscretization;
 
 public class AnalyticFormulaColleteralTest {
 
-	static int interpolationSeed = 13425453;
+	static int interpolationSeed = 112453;
 	
 	final static double liborPeriodLength	= 10;
 	final static double liborRateTimeHorzion	= 40.0;
@@ -65,9 +66,11 @@ public class AnalyticFormulaColleteralTest {
 		LMMBB.getNumeraire(LMMBB.getTime(LMMBB.getTimeDiscretization().getNumberOfTimeSteps()));
 		
 		double evaluationTime = 0.0;
-		double fixingDate     = 13.0;
-		double paymentDate    = 14.0;
-		double strike         = 0.2;
+		double fixingDate     = 14.9;
+		double paymentDate    = 15.0;
+		double strike         = 0.0;
+		
+		
 		
 		//Non Analytic:
 		long beforeNonAnalyticMillis = System.currentTimeMillis();
@@ -81,16 +84,6 @@ public class AnalyticFormulaColleteralTest {
 		double colleteralAnalyticPrice = colleteralOptionAnalytic.getValue(evaluationTime, LMMBB).getAverage();
 		long afterAnalyticMillis = System.currentTimeMillis();
 		
-		
-		//OLD Analytic
-		long beforeOldAnalyticMillis = System.currentTimeMillis();
-		OldColleteralOption colleteralOldOptionAnalytic	 = new OldColleteralOption(fixingDate, paymentDate, strike, true);
-		double colleteralOldAnalyticPrice = colleteralOldOptionAnalytic.getValue(evaluationTime, LMMBB).getAverage();
-		long afterOldAnalyticMillis = System.currentTimeMillis();
-		System.out.println("OldAnalytic: "  + colleteralOldAnalyticPrice);
-		
-		System.out.println("LMMBB: " + LMMBB.getNumeraire(13.0));
-		System.out.println(LMMBB.getLIBOR(13.0, 13.0, 14.0).size());
 		
 		//printOuts:
 		System.out.println("NonAnalyticPrice:\t" + colleteralNonAnalyticPrice);
@@ -128,7 +121,7 @@ public class AnalyticFormulaColleteralTest {
 		net.finmath.marketdata.model.curves.ForwardCurveInterface forwardCurve;
 		net.finmath.marketdata.model.curves.DiscountCurveInterface discountCurve;
 		AnalyticModelInterface analyticModel = null;
-		if(true) {
+		if(false) {
 			 forwardCurve = ForwardCurve.createForwardCurveFromForwards(
 					"forwardCurve"								/* name of the curve */,
 					new double[] {0.5 , 1.0 , 2.0 , 5.0 , 40.0}	/* fixings of the forward */,
@@ -173,7 +166,7 @@ public class AnalyticFormulaColleteralTest {
 						liborPeriodDiscretization, volatilityModel, correlationModel);
 
 		// BlendedLocalVolatlityModel (future extension)
-		//		AbstractLIBORCovarianceModel covarianceModel2 = new BlendedLocalVolatlityModel(covarianceModel, 0.00, false);
+		//		AbstractLIBORCovarianceModel covarianceModel2 = new BlendedLocalVolatilityModel(covarianceModel, 0.00, false);
 
 		// Set liborModel properties
 		Map<String, String> properties = new HashMap<String, String>();
@@ -197,7 +190,7 @@ public class AnalyticFormulaColleteralTest {
 		double[] interpolationParameters = new double[timeDiscretization.getNumberOfTimeSteps()];
 		for (int i = 0; i < interpolationParameters.length; i++) {
 			
-			interpolationParameters[i] = random.nextDouble()/10.0 + 0.1;
+			interpolationParameters[i] = 0.02;//random.nextDouble()/100.0 + 0.01;
 		}
 		
 		double[] evaluationTimeScalingParameters = new double[timeDiscretization.getNumberOfTimeSteps()];
@@ -214,7 +207,7 @@ public class AnalyticFormulaColleteralTest {
 		 */
 		BrownianMotionInterface interpolationDriver = new BrownianMotion(timeDiscretization, 1, numberOfPaths, interpolationSeed);
 		
-		LIBORMarketModelInterface liborMarketModel = new LiborMarketModelWithBridgeInterpolation(liborPeriodDiscretization,
+		LIBORMarketModelInterface liborMarketModel = new LIBORMarketModelWithBridge(liborPeriodDiscretization,
 				analyticModel, forwardCurve, discountCurve, new RandomVariableFactory(), covarianceModel, calibrationItems, properties, interpolationDriver);
 
 		

@@ -3,17 +3,24 @@ package alternativeLIborModelTest;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.util.Iterator;
 
-import org.apache.poi.hssf.usermodel.HSSFCell;
+
 import org.apache.poi.hssf.usermodel.HSSFRow;
 import org.apache.poi.hssf.usermodel.HSSFSheet;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
+import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 import org.apache.poi.poifs.filesystem.POIFSFileSystem;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+
 
 import alternativeLIborModelTest.ExcelData.DataSymbol;
+import net.finmath.stochastic.RandomVariableInterface;
 
 public class AlternativeLiborModelWithExcelDataTest {
 
@@ -29,7 +36,7 @@ public class AlternativeLiborModelWithExcelDataTest {
 		try {
 	        FileInputStream file = new FileInputStream(new File(fileDirectory));
 	
-	        //Create Workbook instance holding reference to .xlsx file
+	        //Create Workbook instance holding reference to .xls file
 	        HSSFWorkbook workbook = new HSSFWorkbook(file);
 
 	        //Get first/desired sheet from the workbook
@@ -58,6 +65,49 @@ public class AlternativeLiborModelWithExcelDataTest {
 	        e.printStackTrace();
 	    }
 		return null;
+	}
+	
+	public static void printDateToExcel(RandomVariableInterface rv, int colum, String fileName) {
+		
+		String fileDirectory = "C:\\Users\\vince\\Desktop" + "\\" + fileName + ".xls";
+		
+		
+		try {
+			File file    = new File(fileDirectory);
+			HSSFWorkbook workbook;
+			HSSFSheet sheet;
+			String sheetname = "test";
+			boolean oldFile = false; 
+			
+			if(file.exists()) {
+				FileInputStream fileInput = new FileInputStream(file);
+				
+				workbook = new HSSFWorkbook(fileInput);
+				sheet = workbook.getSheetAt(0);
+				fileInput.close();
+				oldFile = true;
+			} else {
+				workbook = new HSSFWorkbook();
+				sheet = workbook.createSheet(sheetname);
+			}	         
+   
+	        for (int rowNumber = 0; rowNumber < rv.size(); rowNumber++) {
+	        	Row row = oldFile ? sheet.getRow(rowNumber) : sheet.createRow(rowNumber);
+	        	Cell cell = row.createCell(colum);
+	        	cell.setCellValue(rv.get(rowNumber));
+	        }
+	        FileOutputStream fileOut = new FileOutputStream(file);
+	        workbook.write(fileOut);
+	        workbook.close();
+	        fileOut.close();
+	        
+		} catch (FileNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 }
 

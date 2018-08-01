@@ -12,5 +12,8 @@
 	<classpathentry kind="lib" path="/finmath lib/lib/commons-math3-3.6.1.jar"/>
 	<classpathentry kind="lib" path="/finmath lib/lib/commons-lang3-3.4.jar"/>
 	<classpathentry kind="lib" path="lib/poi-3.17.jar"/>
+	<classpathentry kind="lib" path="lib/poi-ooxml-3.11.jar"/>
+	<classpathentry kind="lib" path="lib/xmlbeans-xmlpublic-2.0-dev-2.jar"/>
+	<classpathentry kind="lib" path="lib/stax-api-1.0.1.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

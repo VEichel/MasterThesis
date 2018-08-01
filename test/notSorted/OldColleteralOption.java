@@ -5,7 +5,7 @@ import java.util.Arrays;
 import org.apache.commons.math3.analysis.function.Abs;
 import org.apache.commons.math3.distribution.NormalDistribution;
 
-import montecarlo.interestrates.LiborMarketModelWithBridgeInterpolation;
+import montecarlo.interestrates.LIBORMarketModelWithBridge;
 import montecarlo.interestrates.modelplugins.AbstractLiborCovarianceModelWithInterpolation;
 import net.finmath.exception.CalculationException;
 import net.finmath.montecarlo.RandomVariable;
@@ -47,7 +47,7 @@ public class OldColleteralOption extends AbstractLIBORMonteCarloProduct {
 		
 		if(useAnalyticFormula) {
 			//currently only working for paymentDate and fixingDate in same period.
-			LiborMarketModelWithBridgeInterpolation interpolationModel = (LiborMarketModelWithBridgeInterpolation) model.getModel();
+			LIBORMarketModelWithBridge interpolationModel = (LIBORMarketModelWithBridge) model.getModel();
 			
 			int fixingIndex 	  			 = interpolationModel.getTimeIndex(fixingDate);
 			int paymentIndex 	 			 = interpolationModel.getTimeIndex(paymentDate);

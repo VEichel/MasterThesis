@@ -22,41 +22,44 @@ import net.finmath.time.TimeDiscretizationInterface;
 
 public class BrownianBridgePaths {
 
-	static int seed = 13412;
+	static int seed = 112453;
 	
 	private static DecimalFormat formatterValue		= new DecimalFormat(" ##0.000;-##0.000", new DecimalFormatSymbols(Locale.ENGLISH));
 	private static int path = 0;
 	
 	public static void main(String[] args) {
 		
-		long startTime = System.currentTimeMillis();
 		
 		RandomVariableInterface start = new RandomVariable(0.0);
 		RandomVariableInterface end   = new RandomVariable(0.0);
-		int numberOfPaths = 100000;
+		int numberOfPaths = 10000;
 		TimeDiscretizationInterface timeDiscretization = new TimeDiscretization(10, 100, 0.1);
-		BrownianMotion standardMotion = new BrownianMotion(timeDiscretization, 1, numberOfPaths, seed);
+		TimeDiscretizationInterface BMtimeDiscretization = new TimeDiscretization(0, 400, 0.1);
+		double endTime = timeDiscretization.getTime(timeDiscretization.getNumberOfTimeSteps());
+		double startTime = timeDiscretization.getTime(0);
+		BrownianMotion standardMotion = new BrownianMotion(BMtimeDiscretization, 1, numberOfPaths, seed);
 		BrownianBridge standardBridge = new BrownianBridge(timeDiscretization, numberOfPaths, seed, start, end);
 		
 		RandomVariableInterface[] variances = new RandomVariableInterface[timeDiscretization.getNumberOfTimeSteps()];
 		for (int i = 0; i < variances.length; i++) {
 			variances[i] = new RandomVariable(0.02);
 		}
+		//variances[variances.length - 1] = new RandomVariable(0.5);
 		BrownianBridgeWithVariance varianceBridge = new BrownianBridgeWithVariance(timeDiscretization, standardMotion, variances);
 		
 		RandomVariableInterface[] bridgeValue = new RandomVariableInterface[timeDiscretization.getNumberOfTimes()];
 		RandomVariableInterface[] bridgeValueWithVariance = new RandomVariableInterface[timeDiscretization.getNumberOfTimes()];
 		bridgeValue[0] = new RandomVariable(0.0);
 		bridgeValueWithVariance[0] = new RandomVariable(0.0);
+		
 		for (int timeIndex = 0; timeIndex < bridgeValue.length - 1; timeIndex++) {
 			bridgeValue[timeIndex+1] = bridgeValue[timeIndex].add(standardBridge.getIncrement(timeIndex,0));
 			bridgeValueWithVariance[timeIndex+1] = bridgeValueWithVariance[timeIndex].add(varianceBridge.getIncrement(timeIndex,0));
 		}
+		//System.out.println(bridgeValueWithVariance[bridgeValueWithVariance.length - 1]);
 		
-		int n = 20;
+		int n = 50;
 		int m = 30;
-		System.out.println("Variance: ");
-		System.out.println(bridgeValue[2].getVariance());
 		System.out.println("with extra: " + bridgeValueWithVariance[n].getVariance());
 		System.out.println();
 		System.out.println("Covariance: " + bridgeValueWithVariance[m].mult(bridgeValueWithVariance[n]).getAverage());
@@ -78,28 +81,53 @@ public class BrownianBridgePaths {
 		System.out.println("---------");
 		//System.out.println(cov(timeDiscretization.getTime(6),timeDiscretization.getTime(5),timeDiscretization.getTime(0),timeDiscretization.getTime(timeDiscretization.getNumberOfTimeSteps())));
 		//System.out.println(bridgeValue[6].mult(bridgeValue[5]).getAverage());
+
 		
-		long startTime9 = System.currentTimeMillis();
+		double T2 = timeDiscretization.getTime(timeDiscretization.getNumberOfTimeSteps());		
 		double varianceOfBB = 0.0;
-		for(int temp=0;temp<10000;temp++) {
+		double varianceOfBBSumPart = 0.0;
+		for (int i = 0; i < m; i++) {
+			double ti     = timeDiscretization.getTime(i);
+			double ti2    = timeDiscretization.getTime(i+1);
+			double varianceI     = 0.02;
+			varianceOfBBSumPart += varianceI * (ti2 -ti) / ((T2-ti2)*(T2-ti));
+		}
+		varianceOfBB = varianceOfBBSumPart * (Math.pow((T2 - timeDiscretization.getTime(m)) , 2) 
+				- 2.0*(T2 - timeDiscretization.getTime(m)) * (T2 - timeDiscretization.getTime(n)));	
+		for (int i = m; i < n; i++) {
+			double ti     = timeDiscretization.getTime(i);
+			double ti2    = timeDiscretization.getTime(i+1);
+			double varianceI     = 0.02;
+			varianceOfBBSumPart += varianceI * (ti2 -ti) / ((T2-ti2)*(T2-ti));
+		}
+		varianceOfBB += varianceOfBBSumPart * Math.pow((T2 - timeDiscretization.getTime(n)) , 2);
+		System.out.println("30.7 calculated: " + varianceOfBB + "\t" + bridgeValueWithVariance[m].sub(bridgeValueWithVariance[n]).getVariance());
+		
 		varianceOfBB = 0.0;
-		for (int i = 1; i < n+1; i++) {
-			for (int j = 1; j < n+1; j++) {
-				double ti = timeDiscretization.getTime(i-1);
-				double ti2 = timeDiscretization.getTime(i);
-				double tj= timeDiscretization.getTime(j-1);
-				double tj2 = timeDiscretization.getTime(j);
-				double T1 = timeDiscretization.getTime(0);
-				double T2 = timeDiscretization.getTime(timeDiscretization.getNumberOfTimeSteps());
-				varianceOfBB += Math.sqrt(variances[i-1].getAverage())*Math.sqrt(variances[j-1].getAverage())*covOfIncrement(ti, ti2, tj, tj2, T1, T2);
-			}
-		}}
-		long varianceOfBBOldTime = System.currentTimeMillis() - startTime9;
-		System.out.println("old calculated: " + varianceOfBB +  "  time needed: " + varianceOfBBOldTime);
+		varianceOfBBSumPart = 0.0;
+		for (int i = 0; i < m; i++) {
+			double varianceI     = 1.0;
+			double ti     = timeDiscretization.getTime(i);
+			double ti2    = timeDiscretization.getTime(i+1);
+			varianceOfBBSumPart += varianceI * (ti2 -ti) / ((T2-ti2)*(T2-ti));
+		}
+		varianceOfBB = varianceOfBBSumPart * (T2 - timeDiscretization.getTime(m)) * (T2 - timeDiscretization.getTime(m));	
+		System.out.println("31.07: " + varianceOfBB +"\t"+ bridgeValue[m].getVariance());
+		
+		varianceOfBB = 0.0;
+		varianceOfBBSumPart = 0.0;
+		for (int i = 0; i < m; i++) {
+			double varianceI     = 1.0;
+			double ti     = timeDiscretization.getTime(i);
+			double ti2    = timeDiscretization.getTime(i+1);
+			varianceOfBBSumPart += varianceI * (ti2 -ti) / ((T2-ti2)*(T2-ti));
+		}
+		varianceOfBB = varianceOfBBSumPart * (T2 - timeDiscretization.getTime(m)) * (T2 - timeDiscretization.getTime(n));	
+		System.out.println("31.07 2: " + varianceOfBB +"\t"+ bridgeValue[m].mult(bridgeValue[n]).getAverage());
+		
+		
 		
 		double varianceOfBBNew = 0.0;
-		long startTime10 = System.currentTimeMillis();
-		for(int temp=0;temp<10000;temp++) {
 		varianceOfBBNew = 0.0;
 		double periodLenght    = timeDiscretization.getTime(timeDiscretization.getNumberOfTimeSteps()) - timeDiscretization.getTime(0);
 		for (int i = 1; i < n+1; i++) {
@@ -112,9 +140,7 @@ public class BrownianBridgePaths {
 				varianceOfBBNew -= 2* Math.sqrt(variances[i-1].getAverage())*Math.sqrt(variances[j-1].getAverage())*(ti2-ti)*(tj2-tj)/periodLenght;
 			}
 		}
-		}
-		long varianceOfBBNewTime = System.currentTimeMillis()-startTime10;
-		System.out.println("new calculated: " + varianceOfBBNew + "  time needed: " + varianceOfBBNewTime);
+		System.out.println(" new calculated: " + varianceOfBBNew);
 		
 		
 		
@@ -122,7 +148,6 @@ public class BrownianBridgePaths {
 		long startTime11 = System.currentTimeMillis();
 		for(int temp=0;temp<10000;temp++) {
 		covOfBBNew = 0.0;
-		double periodLenght    = timeDiscretization.getTime(timeDiscretization.getNumberOfTimeSteps()) - timeDiscretization.getTime(0);
 		for (int i = 1; i < n+1; i++) {
 			double ti = timeDiscretization.getTime(i-1);
 			double ti2 = timeDiscretization.getTime(i);
@@ -273,4 +298,5 @@ public class BrownianBridgePaths {
 		return cov(ti2,tj2,T1,T2)-cov(ti,tj2,T1,T2)-cov(ti2,tj,T1,T2)+cov(ti,tj,T1,T2);
 	}
 
+	
 }

@@ -22,7 +22,7 @@ import java.util.Vector;
 import org.junit.Assert;
 import org.junit.Test;
 
-import montecarlo.interestrates.LiborMarketModelWithBridgeInterpolation;
+import montecarlo.interestrates.LIBORMarketModelWithBridge;
 import montecarlo.interestrates.modelplugins.AbstractLiborCovarianceModelWithInterpolation;
 import montecarlo.interestrates.modelplugins.LiborCovarianceModelWithInterpolation;
 import montecarlo.interestrates.modelplugins.LiborCovarianceModelWithInterpolation.EvaluationTimeScalingScheme;
@@ -335,7 +335,7 @@ public class LIBORMarketModelCalibrationTest {
 		BrownianMotionInterface interpolationDriver = new BrownianMotion(timeDiscretization, 1, numberOfPaths, /*seed*/ 18273625);
 		
 		 
-		LIBORMarketModelInterface liborMarketModelWithBB = new LiborMarketModelWithBridgeInterpolation(liborPeriodDiscretization,
+		LIBORMarketModelInterface liborMarketModelWithBB = new LIBORMarketModelWithBridge(liborPeriodDiscretization,
 				curveModel,
 				forwardCurve, new DiscountCurveFromForwardCurve(forwardCurve),
 				new RandomVariableFactory(),
@@ -348,7 +348,7 @@ public class LIBORMarketModelCalibrationTest {
 		long millisCalibrationEndBB = System.currentTimeMillis();
 
 		System.out.println("\nCalibrated parameters are:");
-		double[] paramBB = ((AbstractLIBORCovarianceModelParametric)((LiborMarketModelWithBridgeInterpolation) liborMarketModelWithBB).getCovarianceModel()).getParameter();
+		double[] paramBB = ((AbstractLIBORCovarianceModelParametric)((LIBORMarketModelWithBridge) liborMarketModelWithBB).getCovarianceModel()).getParameter();
 		for (double p : paramBB) System.out.println(p);
 
 		ProcessEulerScheme processBB = new ProcessEulerScheme(brownianMotion);
