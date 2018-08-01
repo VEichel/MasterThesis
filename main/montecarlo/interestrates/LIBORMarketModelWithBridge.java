@@ -268,19 +268,49 @@ public class LIBORMarketModelWithBridge extends AbstractModel implements LIBORMa
 			/*
 			 * Adjust for discounting, i.e. funding or collateralization
 			 */
-			double lowerTime 			    	= getLiborPeriod(lowerIndex);   //T_i
 			double upperTime    				= getLiborPeriod(upperIndex);   //T_i+1
-			double alpha            			= (upperTime - time) / (upperTime - lowerTime);
+			
+			RandomVariableInterface numeraire   = getUnAdjustedNumeraire(upperTime).div(getLIBOR(time, time, upperTime).mult(upperTime - time).add(1.0));
+
+			
+			
 			RandomVariableInterface bridge		= getBrownianBridge(lowerIndex, time);
 			RandomVariableInterface evaluationTimeScalingFactor = covarianceModel.getEvaluationTimeScalingFactor(timeIndex);
+			double lowerTime = getLiborPeriod(lowerIndex);
+			double alpha = (upperTime - time) / (upperTime - lowerTime);
 			
-			RandomVariableInterface numeraire   = (getNumeraire(upperTime).log().mult(1 - alpha).add(getNumeraire(lowerTime).log().mult(alpha)).add(
-													bridge.mult(evaluationTimeScalingFactor))).exp();
-
+			double analyticLiborShortPeriod				= getForwardRateCurve().getForward(getAnalyticModel(), time, upperTime -time);
+			double analyticLibor					 	= getForwardRateCurve().getForward(getAnalyticModel(), lowerTime, upperTime -lowerTime);
+			double analyticInterpolatedOnePlusLiborDt		= Math.exp(Math.log(1 + analyticLibor * (upperTime - lowerTime)) * alpha);
+			double analyticOnePlusLiborDt					= (1 + analyticLiborShortPeriod * (upperTime -time));
+			double adjustment = analyticOnePlusLiborDt / analyticInterpolatedOnePlusLiborDt;
+			RandomVariableInterface numeraire2 = (getUnAdjustedNumeraire(upperTime).log().mult(1 - alpha).add(getUnAdjustedNumeraire(lowerTime).log().mult(alpha))
+					.sub(bridge.mult(evaluationTimeScalingFactor))).exp();
+			numeraire = numeraire2;
+			
+			
 			if(discountCurve != null) {
 				// This includes a control for zero bonds
 				double deterministicNumeraireAdjustment = numeraire.invert().getAverage() / discountCurve.getDiscountFactor(curveModel, time);
 				numeraire = numeraire.mult(deterministicNumeraireAdjustment);
+				//System.out.println("inLMM numeraireAdj interpol " + time + "\t" + deterministicNumeraireAdjustment);
+				
+				/*
+				RandomVariableInterface bridge		= getBrownianBridge(lowerIndex, time);
+				RandomVariableInterface evaluationTimeScalingFactor = covarianceModel.getEvaluationTimeScalingFactor(timeIndex);
+				double lowerTime = getLiborPeriod(lowerIndex);
+				double alpha = (upperTime - time) / (upperTime - lowerTime);
+				
+				double analyticLiborShortPeriod				= getForwardRateCurve().getForward(getAnalyticModel(), time, upperTime -time);
+				double analyticLibor					 	= getForwardRateCurve().getForward(getAnalyticModel(), lowerTime, upperTime -lowerTime);
+				double analyticInterpolatedOnePlusLiborDt		= Math.exp(Math.log(1 + analyticLibor * (upperTime - lowerTime)) * alpha);
+				double analyticOnePlusLiborDt					= (1 + analyticLiborShortPeriod * (upperTime -time));
+				double adjustment = analyticOnePlusLiborDt / analyticInterpolatedOnePlusLiborDt;
+				RandomVariableInterface numeraire2 = (getUnAdjustedNumeraire(upperTime).log().mult(1 - alpha).add(getUnAdjustedNumeraire(lowerTime).log().mult(alpha))
+						.sub(bridge.mult(evaluationTimeScalingFactor))).exp().div(adjustment);
+				System.out.println(numeraire);
+				System.out.println(numeraire2);
+				*/
 			}
 
 			return numeraire;
@@ -354,6 +384,7 @@ public class LIBORMarketModelWithBridge extends AbstractModel implements LIBORMa
 			// This includes a control for zero bonds
 			double deterministicNumeraireAdjustment = numeraire.invert().getAverage() / discountCurve.getDiscountFactor(curveModel, time);
 			numeraire = numeraire.mult(deterministicNumeraireAdjustment);
+			System.out.println("inLMM numeraireAdj " + time + "\t" + deterministicNumeraireAdjustment);
 		}
 		return numeraire;
 	}
@@ -586,7 +617,7 @@ public class LIBORMarketModelWithBridge extends AbstractModel implements LIBORMa
 		}*/
 		
 		if(interpolationScheme == InterpolationScheme.LOGLINEAR) {
-			libor = startLibor.mult(periodLenght).add(1.0).log().mult(alpha).sub(bridge.mult(evaluationTimeScalingFactor)).exp().sub(1.0).div(shortPeriodLenght);
+			libor = (startLibor.mult(periodLenght).add(1.0).log().mult(alpha).add(bridge.mult(evaluationTimeScalingFactor))).exp().sub(1.0).div(shortPeriodLenght);
 		}
 		else { throw new UnsupportedOperationException("InterpolationScheme not supported!"); }
 		
@@ -597,6 +628,7 @@ public class LIBORMarketModelWithBridge extends AbstractModel implements LIBORMa
 			double analyticOnePlusLiborDt					= (1 + analyticLiborShortPeriod * (shortPeriodLenght));
 			double adjustment = analyticOnePlusLiborDt / analyticInterpolatedOnePlusLiborDt;
 			libor = libor.mult(shortPeriodLenght).add(1.0).mult(adjustment).sub(1.0).div(shortPeriodLenght);
+			System.out.println("inLMM Forward adjustment: " + adjustment);
 		}
 	
 		return libor;

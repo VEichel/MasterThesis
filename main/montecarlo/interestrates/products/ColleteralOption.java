@@ -5,7 +5,6 @@ package montecarlo.interestrates.products;
 import java.util.Arrays;
 
 import org.apache.commons.math3.analysis.function.Abs;
-import org.apache.commons.math3.distribution.NormalDistribution;
 import org.apache.commons.math3.genetics.GeneticAlgorithm;
 import org.apache.commons.math3.special.Erf;
 
@@ -13,6 +12,7 @@ import montecarlo.interestrates.LIBORMarketModelWithBridge;
 import montecarlo.interestrates.modelplugins.AbstractLiborCovarianceModelWithInterpolation;
 import net.finmath.exception.CalculationException;
 import net.finmath.functions.AnalyticFormulas;
+import net.finmath.functions.NormalDistribution;
 import net.finmath.marketdata.model.AnalyticModelInterface;
 import net.finmath.montecarlo.RandomVariable;
 import net.finmath.montecarlo.RandomVariableFactory;
@@ -376,9 +376,8 @@ public class ColleteralOption extends AbstractLIBORMonteCarloProduct {
 			double discountFactorLiborEnd = interpolationModel.getDiscountCurve().getDiscountFactor(interpolationModel.getAnalyticModel(), liborEndTimeFixing);
 			double integratedVarianceOfLibor = interpolationModel.getIntegratedLIBORCovariance()[model.getTimeIndex(liborStartTimeFixing)][liborStartIndexFixing][liborStartIndexFixing];
 			System.out.println("integratedVarianceOfLibor: " + integratedVarianceOfLibor);
-			double numeraireChangeAdjustment = (discountFactorFixing / (discountFactorPayment * periodLenght) - 1) * ( - 1 +
-					Math.exp(-(alphaFixing - alphaPayment) * alphaPayment * integratedVarianceOfLibor * Math.pow(1 - discountFactorLiborEnd/discountFactorLiborStart, 2) ) );
-			System.out.println("numeraireChangeAdjustment " + numeraireChangeAdjustment);
+			/*double numeraireChangeAdjustment = (discountFactorFixing / (discountFactorPayment * periodLenght) - 1) * ( - 1 +
+					Math.exp(-(alphaFixing - alphaPayment) * alphaPayment * integratedVarianceOfLibor * Math.pow(1 - discountFactorLiborEnd/discountFactorLiborStart, 2) ) );*/
 			/**
 			 * END Adjustment
 			 */
@@ -423,14 +422,14 @@ public class ColleteralOption extends AbstractLIBORMonteCarloProduct {
 			double value = 0.5 * Math.exp(mu + sigmaSquared / 2) * (1 - Erf.erf((Math.log(modifiedStrike) - mu - sigmaSquared) / Math.sqrt(2 * sigmaSquared))) + 0.5 * modifiedStrike * ( -1 + Erf.erf((Math.log(modifiedStrike) - mu) / Math.sqrt(2 * sigmaSquared)) );
 			
 			value = discountFactorPayment / (paymentDate - fixingDate) * value;
-			System.out.println(value);
-			System.out.println(brownianBridge.add(numeraireChangeAdjustment).sub(strike).floor(0.0).getAverage() * discountFactorPayment);
 			
 			
 			/**
 			 * new 17.07
 			 */
 			double varianceOfBB = 0.0;
+			double varianceOfBBFixing = 0.0;
+			double varianceOfBBPayment = 0.0;
 			double varianceOfBBSumPart = 0.0;
 			for (int i = interpolationModel.getTimeIndex(liborStartTimeFixing); i < fixingIndex; i++) {
 				double varianceI     = covarianceModel.getVarianceForInterpolation(i).getAverage();
@@ -438,15 +437,18 @@ public class ColleteralOption extends AbstractLIBORMonteCarloProduct {
 				double ti2    = interpolationModel.getTime(i+1);
 				varianceOfBBSumPart += varianceI * (ti2 -ti) / ((liborEndTimeFixing-ti2)*(liborEndTimeFixing-ti));
 			}
-			varianceOfBB = varianceOfBBSumPart * (Math.pow((liborEndTimeFixing - fixingDate) , 2) 
-					- 2.0*(liborEndTimeFixing - fixingDate) * (liborEndTimeFixing - paymentDate));	
+			varianceOfBBFixing = varianceOfBBSumPart * Math.pow((liborEndTimeFixing - fixingDate) , 2);
+			varianceOfBB       = varianceOfBBFixing + varianceOfBBSumPart *(- 2.0*(liborEndTimeFixing - fixingDate) * (liborEndTimeFixing - paymentDate));	
 			for (int i = fixingIndex; i < paymentIndex; i++) {
 				double varianceI    = covarianceModel.getVarianceForInterpolation(i).getAverage();
 				double ti     = interpolationModel.getTime(i);
 				double ti2    = interpolationModel.getTime(i+1);
 				varianceOfBBSumPart += varianceI * (ti2 -ti) / ((liborEndTimeFixing-ti2)*(liborEndTimeFixing-ti));
 			}
-			varianceOfBB += varianceOfBBSumPart * Math.pow((liborEndTimeFixing - paymentDate) , 2);
+			varianceOfBBPayment =  varianceOfBBSumPart * Math.pow((liborEndTimeFixing - paymentDate) , 2);
+			varianceOfBB += varianceOfBBPayment;
+			System.out.println("variances: " + varianceOfBBFixing +"\t" + varianceOfBBPayment + "\t" + varianceOfBB);
+			
 			System.out.println("31.07:" + brownianBridge1.sub(brownianBridge2).getVariance() +"\t" + varianceOfBB);
 			
 			System.out.println("bs: " + AnalyticFormulas.blackScholesGeneralizedOptionValue( discountFactorFixing / discountFactorPayment  ,
@@ -456,15 +458,67 @@ public class ColleteralOption extends AbstractLIBORMonteCarloProduct {
 									, discountFactorPayment / periodLenght));
 			values = new RandomVariable(0.0);
 			
+			double adjustment = 1.0;
+			//For the adjustments:
+			//if(interpolationModel.getForwardRateCurve() != null) {
+				double forwardCurveFixingEnd    = 1 + interpolationModel.getForwardRateCurve().getForward(interpolationModel.getAnalyticModel(), fixingDate, liborEndTimeFixing - fixingDate) * (liborEndTimeFixing - fixingDate);
+				double forwardCurvePaymentEnd   = 1 + interpolationModel.getForwardRateCurve().getForward(interpolationModel.getAnalyticModel(), paymentDate, liborEndTimePayment - paymentDate) * (liborEndTimePayment - paymentDate);
+				double forwardCurveLongFixing   = 1 + interpolationModel.getForwardRateCurve().getForward(interpolationModel.getAnalyticModel(), liborStartTimeFixing, liborEndTimeFixing - liborStartTimeFixing) * (liborEndTimeFixing - liborStartTimeFixing);
+				double forwardCurveLongPayment  = samePeriod ? forwardCurveLongFixing : 
+													1 + interpolationModel.getForwardRateCurve().getForward(interpolationModel.getAnalyticModel(), liborStartTimePayment, liborEndTimePayment - liborStartTimePayment) * (liborEndTimePayment - liborStartTimePayment); 
+				
+				double forwardCurveFixingEndLog  = Math.exp(Math.log(forwardCurveLongFixing)*(liborEndTimeFixing - fixingDate)/(liborEndTimeFixing - liborStartTimeFixing));
+				double forwardCurvePaymentEndLog = Math.exp(Math.log(forwardCurveLongPayment)*(liborEndTimePayment - paymentDate)/(liborEndTimePayment - liborStartTimePayment)); 
+				
+				double forwardFixingAdjustment   = forwardCurveFixingEnd  / forwardCurveFixingEndLog;
+				System.out.println(forwardFixingAdjustment);
+				double forwardPaymentAdjustment  = forwardCurvePaymentEnd / forwardCurvePaymentEndLog;
+				System.out.println(forwardPaymentAdjustment);
+				
+				adjustment =  forwardFixingAdjustment / forwardPaymentAdjustment ;
+			//}
+			System.out.println(adjustment);
+			if(interpolationModel.getDiscountCurve() != null) {
+				double numeraireAtPeriodEndAdjustment   = interpolationModel.getUnAdjustedNumeraire(liborEndTimeFixing).invert().getAverage()   / discountFactorLiborEnd;
+				double numeraireAtPeriodStartAdjustment = interpolationModel.getUnAdjustedNumeraire(liborStartTimeFixing).invert().getAverage() / discountFactorLiborStart;		
+				System.out.println("numeraireAtPeriodEndAdjustment " + numeraireAtPeriodEndAdjustment);
+				System.out.println("numeraireAtPeriodStartAdjustment " + numeraireAtPeriodStartAdjustment);
+				double numeraireAtFixingAdjustment   = interpolationModel.getUnAdjustedNumeraire(liborEndTimeFixing).log().mult(alphaFixing - 1)
+														.add(interpolationModel.getUnAdjustedNumeraire(liborStartTimeFixing).log().mult(-alphaFixing)).exp().getAverage() 
+														* Math.exp(varianceOfBBFixing / 2.0) * forwardFixingAdjustment/ discountFactorFixing;
+				System.out.println("numeraireAtFixingAdjustment " + numeraireAtFixingAdjustment);
+				double numeraireAtPaymentAdjustment = interpolationModel.getUnAdjustedNumeraire(liborEndTimeFixing).pow(alphaPayment - 1)
+														.mult(interpolationModel.getUnAdjustedNumeraire(liborStartTimeFixing).pow(-alphaPayment)).getAverage() 
+														* Math.exp(varianceOfBBPayment / 2.0) * forwardPaymentAdjustment/ discountFactorPayment;
+				System.out.println("numeraireAtPaymentAdjustment " + numeraireAtPaymentAdjustment);
+				//adjustment *= Math.pow(numeraireAtPeriodEndAdjustment, alphaFixing - alphaPayment) * Math.pow(numeraireAtPeriodStartAdjustment, alphaPayment - alphaFixing)
+				//		   * numeraireAtPaymentAdjustment / numeraireAtFixingAdjustment;
+				
+				adjustment *= numeraireAtPaymentAdjustment / numeraireAtFixingAdjustment;
+			}
 			
 			
+			System.out.println("01.08 adjusmtent: " + adjustment);
+
 			//test bs mit exp(BB) am ende drauf: 18.07
-			System.out.println("31.07 2: " + analyticFormula( discountFactorFixing / discountFactorPayment  ,
-									periodLenght * Math.sqrt(integratedVarianceOfLibor/liborStartTimeFixing) * (1.0 / longPeriodLenght)* (1.0 - discountFactorLiborEnd/discountFactorLiborStart)
+			System.out.println("31.07 2: " + analyticFormula( /*adjustment* */ discountFactorFixing / discountFactorPayment  ,
+									periodLenght * Math.sqrt(integratedVarianceOfLibor/fixingDate) * (1.0 / longPeriodLenght)* (1.0 - discountFactorLiborEnd/discountFactorLiborStart)
 									, liborStartTimeFixing
 									, modifiedStrike
 									, discountFactorPayment / periodLenght, Math.sqrt(varianceOfBB)));
 			System.out.println();
+			RandomVariableInterface bb = brownianBridge2.sub(brownianBridge1).exp();
+			System.out.println(discountFactorFixing / discountFactorPayment);
+			double test0108 =0.0;
+			 for (int i = 0; i < bb.size(); i++) {
+				 test0108 += AnalyticFormulas.blackScholesGeneralizedOptionValue(bb.get(i) * discountFactorFixing / discountFactorPayment  ,
+							periodLenght * Math.sqrt(integratedVarianceOfLibor/liborStartTimeFixing) * (1.0 / longPeriodLenght)* (1.0 - discountFactorLiborEnd/discountFactorLiborStart)
+							, liborStartTimeFixing
+							, modifiedStrike
+							, discountFactorPayment / periodLenght);
+			}
+			 System.out.println("test0108: " + (test0108 / bb.size()) );
+			 System.out.println();
 			//end test
 		} else {
 			
@@ -473,14 +527,13 @@ public class ColleteralOption extends AbstractLIBORMonteCarloProduct {
 			RandomVariableInterface numeraireAtPayment	 				= model.getNumeraire(paymentDate);
 			RandomVariableInterface monteCarloProbabilitiesAtPayment    = model.getMonteCarloWeights(paymentDate);
 			double periodLenght 					    			  	= paymentDate - fixingDate;
-			values = numeraireAtPayment.div(numeraireAtFixing).sub(1).div(periodLenght).sub(strike).floor(0.0);
+			values = numeraireAtPayment.div(numeraireAtFixing).sub(1.0).div(periodLenght).sub(strike).floor(0.0);
 			values = values.div(numeraireAtPayment).mult(monteCarloProbabilitiesAtPayment);
 		}
 		RandomVariableInterface numeraireAtEvaluation				= model.getNumeraire(evaluationTime);
 		RandomVariableInterface monteCarloProbabilitiesAtEvaluation = model.getMonteCarloWeights(evaluationTime);
-		if(useAnalyticFormula) monteCarloProbabilitiesAtEvaluation  = model.getRandomVariableForConstant(1.0);
 		values = values.mult(numeraireAtEvaluation).div(monteCarloProbabilitiesAtEvaluation);
-		double discountFactorPayment = model.getModel().getDiscountCurve().getDiscountFactor(model.getModel().getAnalyticModel(), paymentDate);
+		//double discountFactorPayment = model.getModel().getDiscountCurve().getDiscountFactor(model.getModel().getAnalyticModel(), paymentDate);
 		
 		//values = values.mult(discountFactorPayment);
 		return values;
@@ -498,15 +551,15 @@ public class ColleteralOption extends AbstractLIBORMonteCarloProduct {
 	
 	public static double analyticFormula(double forward, double volatility, double optionMaturity, double optionStrike, double payoffUnit, double bridgeVolatility) {
 		
-		double dPlus = (Math.log(forward / optionStrike) + 0.5 * volatility * volatility * optionMaturity) / (volatility * Math.sqrt(optionMaturity));
-		double dMinus = dPlus - volatility * Math.sqrt(optionMaturity);
+		//double dPlus = (Math.log(forward / optionStrike) + 0.5 * volatility * volatility * optionMaturity) / (Math.sqrt(optionMaturity));
+		//double dMinus = dPlus - volatility * Math.sqrt(optionMaturity);
 		
-		double erfDenominator = Math.sqrt(2*(bridgeVolatility*bridgeVolatility + volatility*volatility*optionMaturity));
-		double erfSInput = (Math.sqrt(optionMaturity)*volatility*dPlus + bridgeVolatility*bridgeVolatility) / erfDenominator;
-		double erfKInput = (Math.sqrt(optionMaturity)*volatility*dMinus) / erfDenominator;
+		double phiDenominator = Math.sqrt(2*(bridgeVolatility*bridgeVolatility + volatility*volatility*optionMaturity));
+		double phiSInput = (Math.log(forward / optionStrike) + 0.5 * volatility * volatility * optionMaturity + bridgeVolatility * bridgeVolatility) / phiDenominator;
+		double phiKInput = (Math.log(forward / optionStrike) - 0.5 * volatility * volatility * optionMaturity) / phiDenominator;
 		
-		double value = forward * 0.5 * Math.exp(bridgeVolatility*bridgeVolatility*0.5) * (Erf.erf(erfSInput) + 1) 
-						- optionStrike * 0.5 * (Erf.erf(erfKInput) + 1);
+		double value = forward * Math.exp(bridgeVolatility*bridgeVolatility*0.5) * NormalDistribution.cumulativeDistribution(phiSInput) 
+						- optionStrike  * NormalDistribution.cumulativeDistribution(phiKInput);
 		return value * payoffUnit;
 	}
 }
