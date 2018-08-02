@@ -38,7 +38,7 @@ import net.finmath.time.TimeDiscretization;
 
 public class AnalyticFormulaColleteralTest {
 
-	static int interpolationSeed = 1124233;
+	static int interpolationSeed = 1231223;
 	
 	final static double liborPeriodLength	= 10;
 	final static double liborRateTimeHorzion	= 40.0;
@@ -73,9 +73,9 @@ public class AnalyticFormulaColleteralTest {
 		System.out.println(LMMBB.getModel().getForwardRateCurve().getForward(LMMBB.getModel().getAnalyticModel(), 3.0,2.0));
 		System.out.println((LMMBB.getModel().getDiscountCurve().getDiscountFactor(3.0) / LMMBB.getModel().getDiscountCurve().getDiscountFactor(5.0) - 1.0) / 2.0 );
 		double evaluationTime = 0.0;
-		double fixingDate     = 3.0;
-		double paymentDate    = 5.0;
-		double strike         = 0.0;
+		double fixingDate     = 25.0;
+		double paymentDate    = 29.0;
+		double strike         = (LMMBB.getModel().getDiscountCurve().getDiscountFactor(fixingDate) / LMMBB.getModel().getDiscountCurve().getDiscountFactor(paymentDate) - 1.0) / (paymentDate - fixingDate);
 		
 		
 		
@@ -154,8 +154,8 @@ public class AnalyticFormulaColleteralTest {
 		/*
 		 * Create a volatility structure v[i][j] = sigma_j(t_i)
 		 */
-		//double a = 0.5, b = 0.0, c = 0.25, d = 0.1;
-		double a=0.0, b=0.0, c=0.0, d=0.0;
+		double a = 0.5, b = 0.0, c = 0.25, d = 0.1;
+		//double a=0.0, b=0.0, c=0.0, d=0.0;
 		LIBORVolatilityModel volatilityModel = new LIBORVolatilityModelFourParameterExponentialForm(timeDiscretization, liborPeriodDiscretization, a, b, c, d, false);		
 
 		/*
@@ -198,12 +198,12 @@ public class AnalyticFormulaColleteralTest {
 		double[] interpolationParameters = new double[timeDiscretization.getNumberOfTimeSteps()];
 		for (int i = 0; i < interpolationParameters.length; i++) {
 			
-			interpolationParameters[i] = 0.02;//random.nextDouble()/100.0 + 0.01;
+			interpolationParameters[i] = random.nextDouble()/1000.0;
 		}
 		
 		double[] evaluationTimeScalingParameters = new double[timeDiscretization.getNumberOfTimeSteps()];
 		for (int i = 0; i < evaluationTimeScalingParameters.length; i++) {
-			evaluationTimeScalingParameters[i] = 1.0; //+ timeDiscretization.getTimeStep(i) * 0.05;
+			evaluationTimeScalingParameters[i] = 0.8 + 0.4 * random.nextDouble();
 		}
 		 
 		
