@@ -276,7 +276,7 @@ public class LIBORMarketModelWithBridge extends AbstractModel implements LIBORMa
 			RandomVariableInterface numeraire   = getNumeraire(upperTime).div(getLIBOR(time, time, upperTime).mult(upperTime - time).add(1.0));
 
 			
-			
+			/*
 			RandomVariableInterface bridge		= getBrownianBridge(lowerIndex, time);
 			RandomVariableInterface evaluationTimeScalingFactor = covarianceModel.getEvaluationTimeScalingFactor(timeIndex);
 			double lowerTime = getLiborPeriod(lowerIndex);
@@ -289,7 +289,7 @@ public class LIBORMarketModelWithBridge extends AbstractModel implements LIBORMa
 			double adjustment = analyticOnePlusLiborDt / analyticInterpolatedOnePlusLiborDt;
 			RandomVariableInterface numeraire2 = (getUnAdjustedNumeraire(upperTime).log().mult(1 - alpha).add(getUnAdjustedNumeraire(lowerTime).log().mult(alpha))
 					.sub(bridge.mult(evaluationTimeScalingFactor))).exp();
-		    //numeraire = numeraire2;
+		    numeraire = numeraire2;*/
 			
 			
 			if(discountCurve != null) {

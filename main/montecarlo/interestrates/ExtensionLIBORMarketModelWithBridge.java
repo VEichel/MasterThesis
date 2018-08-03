@@ -36,8 +36,7 @@ public class ExtensionLIBORMarketModelWithBridge extends LIBORMarketModel{
 	
 	
 	
-	public ExtensionLIBORMarketModelWithBridge(LIBORMarketModel liborMarketModel) throws CalculationException {
-		super(null, null, null, null, null, null, null);
+	public ExtensionLIBORMarketModelWithBridge() throws CalculationException {
 	}
 	
 	public static ExtensionLIBORMarketModelWithBridge getLIBORMarketModelExtendedWithBridge(LIBORMarketModel liborMarketModel,
@@ -116,77 +115,7 @@ public class ExtensionLIBORMarketModelWithBridge extends LIBORMarketModel{
 
 			return numeraire;
 		}
-
-		/*
-		 * Calculate the numeraire, when time is part of liborPeriodDiscretization
-		 */
-
-		/*
-		 * Check if numeraire cache is values (i.e. process did not change)
-		 */
-		if(getProcess() != getNumerairesProcess()) {
-			getNumeraires().clear();
-			getNumerairesProcess() = getProcess();
-		}
-
-		/*
-		 * Check if numeraire is part of the cache
-		 */
-		RandomVariableInterface numeraire = getNumeraires().get(liborTimeIndex);
-		if(numeraire == null) {
-			/*
-			 * Calculate the numeraire for timeIndex
-			 */
-
-			// Initialize to 1.0
-			numeraire = getRandomVariableForConstant(1.0);
-
-
-			// Get the start and end of the product
-			int firstLiborIndex, lastLiborIndex;
-
-			if(getMeasure() == Measure.TERMINAL) {
-				firstLiborIndex	= getLiborPeriodIndex(time);
-				if(firstLiborIndex < 0) {
-					throw new CalculationException("Simulation time discretization not part of forward rate tenor discretization.");
-				}
-
-				lastLiborIndex 	= getLiborPeriodDiscretization().getNumberOfTimeSteps()-1;
-			}
-			else if(getMeasure() == Measure.SPOT) {
-				// Spot measure
-				firstLiborIndex	= 0;
-				lastLiborIndex	= getLiborPeriodIndex(time)-1;
-			}
-			else {
-				throw new CalculationException("Numeraire not implemented for specified measure.");
-			}
-
-			// The product 
-			for(int liborIndex = firstLiborIndex; liborIndex<=lastLiborIndex; liborIndex++) {
-				RandomVariableInterface libor = getLIBOR(getTimeIndex(Math.min(time,getLiborPeriodDiscretization().getTime(liborIndex))), liborIndex);
-
-				double periodLength = getLiborPeriodDiscretization().getTimeStep(liborIndex);
-
-				if(getMeasure() == Measure.SPOT) {
-					numeraire = numeraire.accrue(libor, periodLength);
-				}
-				else {
-					numeraire = numeraire.discount(libor, periodLength);
-				}
-			}
-			getNumeraires().put(liborTimeIndex, numeraire);
-		}
-
-		/*
-		 * Adjust for discounting, i.e. funding or collateralization
-		 */
-		if(getDiscountCurve() != null) {
-			// This includes a control for zero bonds
-			double deterministicNumeraireAdjustment = numeraire.invert().getAverage() / getDiscountCurve().getDiscountFactor(getAnalyticModel(), time);
-			numeraire = numeraire.mult(deterministicNumeraireAdjustment);
-		}
-		return numeraire;
+		return super.getNumeraire(time);
 	}
 	
 	@Override
@@ -343,7 +272,7 @@ public class ExtensionLIBORMarketModelWithBridge extends LIBORMarketModel{
 		return brownianBridgeValues[liborIndex][bridgeTimeIndex];
 	}
 	
-	
+	/*
 	@Override
 	public Object clone() {
 		try {

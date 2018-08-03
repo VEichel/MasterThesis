@@ -118,7 +118,7 @@ public class LMMWIthBB {
 		net.finmath.marketdata.model.curves.ForwardCurveInterface forwardCurve;
 		net.finmath.marketdata.model.curves.DiscountCurveInterface discountCurve;
 		AnalyticModelInterface analyticModel = null;
-		if(false) {
+		if(true) {
 			 forwardCurve = ForwardCurve.createForwardCurveFromForwards(
 					"forwardCurve"								/* name of the curve */,
 					new double[] {0.5 , 1.0 , 2.0 , 5.0 , 40.0}	/* fixings of the forward */,
@@ -188,7 +188,7 @@ public class LMMWIthBB {
 		double[] interpolationParameters = new double[timeDiscretization.getNumberOfTimeSteps()];
 		for (int i = 0; i < interpolationParameters.length; i++) {
 			
-			interpolationParameters[i] = 0.001 * (-Math.log(random.nextDouble()));
+			interpolationParameters[i] = 0.0;//0.001 * (-Math.log(random.nextDouble()));
 		}
 		
 		double[] evaluationTimeScalingParameters = new double[timeDiscretization.getNumberOfTimeSteps()];
@@ -229,7 +229,7 @@ public class LMMWIthBB {
 		net.finmath.marketdata.model.curves.ForwardCurveInterface forwardCurve;
 		net.finmath.marketdata.model.curves.DiscountCurveInterface discountCurve;
 		AnalyticModelInterface analyticModel = null;
-		if(false) {
+		if(true) {
 			 forwardCurve = ForwardCurve.createForwardCurveFromForwards(
 					"forwardCurve"								/* name of the curve */,
 					new double[] {0.5 , 1.0 , 2.0 , 5.0 , 40.0}	/* fixings of the forward */,
