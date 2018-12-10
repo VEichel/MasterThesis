@@ -1,18 +1,13 @@
 package notSorted;
 
-import java.util.Arrays;
-
-import org.apache.commons.math3.analysis.function.Abs;
-import org.apache.commons.math3.distribution.NormalDistribution;
-
 import montecarlo.interestrates.LIBORMarketModelWithBridge;
 import montecarlo.interestrates.modelplugins.AbstractLiborCovarianceModelWithInterpolation;
 import net.finmath.exception.CalculationException;
 import net.finmath.montecarlo.RandomVariable;
-import net.finmath.montecarlo.RandomVariableFactory;
 import net.finmath.montecarlo.interestrate.LIBORModelMonteCarloSimulationInterface;
 import net.finmath.montecarlo.interestrate.products.AbstractLIBORMonteCarloProduct;
 import net.finmath.stochastic.RandomVariableInterface;
+import org.apache.commons.math3.distribution.NormalDistribution;
 
 
 public class OldColleteralOption extends AbstractLIBORMonteCarloProduct {

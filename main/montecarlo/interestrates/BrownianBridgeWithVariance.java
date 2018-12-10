@@ -1,15 +1,14 @@
 package montecarlo.interestrates;
 
 
-import java.io.IOException;
-import java.util.Arrays;
-
 import net.finmath.montecarlo.AbstractRandomVariableFactory;
-import net.finmath.montecarlo.BrownianMotion;
 import net.finmath.montecarlo.BrownianMotionInterface;
 import net.finmath.montecarlo.RandomVariableFactory;
 import net.finmath.stochastic.RandomVariableInterface;
 import net.finmath.time.TimeDiscretizationInterface;
+
+import java.io.IOException;
+import java.util.Arrays;
 
 public class BrownianBridgeWithVariance implements BrownianMotionInterface {
 

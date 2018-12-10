@@ -1,16 +1,5 @@
 package brownianBridge;
 
-import java.security.GeneralSecurityException;
-import java.text.DecimalFormat;
-import java.text.DecimalFormatSymbols;
-import java.util.Locale;
-
-import org.apache.commons.math3.analysis.UnivariateFunction;
-import org.apache.commons.math3.analysis.integration.SimpsonIntegrator;
-import org.apache.commons.math3.analysis.integration.TrapezoidIntegrator;
-import org.apache.commons.math3.distribution.NormalDistribution;
-import org.apache.commons.math3.special.Erf;
-
 import montecarlo.interestrates.BrownianBridgeWithVariance;
 import net.finmath.montecarlo.BrownianBridge;
 import net.finmath.montecarlo.BrownianMotion;
@@ -19,6 +8,14 @@ import net.finmath.montecarlo.RandomVariable;
 import net.finmath.stochastic.RandomVariableInterface;
 import net.finmath.time.TimeDiscretization;
 import net.finmath.time.TimeDiscretizationInterface;
+import org.apache.commons.math3.analysis.UnivariateFunction;
+import org.apache.commons.math3.analysis.integration.TrapezoidIntegrator;
+import org.apache.commons.math3.distribution.NormalDistribution;
+import org.apache.commons.math3.special.Erf;
+
+import java.text.DecimalFormat;
+import java.text.DecimalFormatSymbols;
+import java.util.Locale;
 
 public class BrownianBridgePaths {
 
@@ -196,7 +193,7 @@ public class BrownianBridgePaths {
 		
 		/*
 		System.out.println();
-		System.out.println("Test für Normalverteilungshypothese");
+		System.out.println("Test fï¿½r Normalverteilungshypothese");
 		
 		for (int i = 0; i < numberOfPaths && i<10000; i++) {
 			System.out.println(bridgeValueWithVariance[4].get(i));

@@ -1,10 +1,5 @@
 package montecarlo.interestrates;
 
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
-
-
 import montecarlo.interestrates.modelplugins.AbstractLiborCovarianceModelWithInterpolation;
 import montecarlo.interestrates.modelplugins.LiborCovarianceModelWithInterpolation;
 import montecarlo.interestrates.modelplugins.LiborCovarianceModelWithInterpolation.EvaluationTimeScalingScheme;
@@ -13,16 +8,18 @@ import net.finmath.exception.CalculationException;
 import net.finmath.marketdata.model.AnalyticModelInterface;
 import net.finmath.marketdata.model.curves.DiscountCurveInterface;
 import net.finmath.marketdata.model.curves.ForwardCurveInterface;
-import net.finmath.marketdata.model.volatilities.AbstractSwaptionMarketData;
+import net.finmath.montecarlo.AbstractRandomVariableFactory;
 import net.finmath.montecarlo.BrownianMotionInterface;
 import net.finmath.montecarlo.interestrate.LIBORMarketModel;
-import net.finmath.montecarlo.interestrate.LIBORMarketModel.CalibrationItem;
 import net.finmath.montecarlo.interestrate.modelplugins.AbstractLIBORCovarianceModel;
+import net.finmath.montecarlo.process.AbstractProcess;
+import net.finmath.montecarlo.process.ProcessEulerScheme;
 import net.finmath.stochastic.RandomVariableInterface;
 import net.finmath.time.TimeDiscretization;
 import net.finmath.time.TimeDiscretizationInterface;
 
-
+import java.util.Arrays;
+import java.util.Map;
 
 
 public class ExtensionLIBORMarketModelWithBridge extends LIBORMarketModel{
@@ -33,15 +30,27 @@ public class ExtensionLIBORMarketModelWithBridge extends LIBORMarketModel{
 	private RandomVariableInterface[][] brownianBridgeValues;
 
 	private final BrownianMotionInterface interpolationDriver;
-	
-	
-	
-	public ExtensionLIBORMarketModelWithBridge() throws CalculationException {
+
+
+	public ExtensionLIBORMarketModelWithBridge(TimeDiscretizationInterface liborPeriodDiscretization,
+											   AnalyticModelInterface analyticModel,
+											   ForwardCurveInterface forwardRateCurve,
+											   DiscountCurveInterface discountCurve,
+                                               AbstractRandomVariableFactory randomVariableFactory,
+                                               AbstractLIBORCovarianceModel covarianceModel,
+                                               CalibrationItem[] calibrationItems,
+                                               Map<String, ?> properties,
+                                               BrownianMotionInterface interpolationDriver) throws CalculationException {
+		super(liborPeriodDiscretization, analyticModel, forwardRateCurve,
+                discountCurve, randomVariableFactory, covarianceModel, calibrationItems, properties);
+		this.interpolationDriver = interpolationDriver;
+        if(((ProcessEulerScheme) interpolationDriver).getScheme() == ProcessEulerScheme.Scheme.PREDICTOR_CORRECTOR)
+            throw new IllegalArgumentException("Interpolation Process is not allowed to have Predictor Corrector Scheme!");
 	}
-	
+
 	public static ExtensionLIBORMarketModelWithBridge getLIBORMarketModelExtendedWithBridge(LIBORMarketModel liborMarketModel,
-			double[] interpolationParameters, double[] evaluationTimeScalingParameters,
-			InterpolationVarianceScheme interpolationVarianceScheme, EvaluationTimeScalingScheme evaluationTimeScalingScheme) {
+																							double[] interpolationParameters, double[] evaluationTimeScalingParameters,
+																							InterpolationVarianceScheme interpolationVarianceScheme, EvaluationTimeScalingScheme evaluationTimeScalingScheme) {
 		
 		AbstractLiborCovarianceModelWithInterpolation newCovarianceModel = new LiborCovarianceModelWithInterpolation(liborMarketModel.getCovarianceModel(), evaluationTimeScalingParameters,
 																					evaluationTimeScalingParameters, interpolationVarianceScheme, evaluationTimeScalingScheme, true);
@@ -200,7 +209,7 @@ public class ExtensionLIBORMarketModelWithBridge extends LIBORMarketModel{
 		int    previousLiborIndex = getLiborPeriodIndex(processTime); 
 		
 		//if(previousLiborIndex>=0) throw new UnsupportedOperationException("This method is only for inner period LIBORs!");
-		RandomVariableInterface evaluationTimeScalingFactor = ((AbstractLiborCovarianceModelWithInterpolation) getCovarianceModel()).getEvaluationTimeScalingFactor(evaluationTimeIndex);
+		//RandomVariableInterface evaluationTimeScalingFactor = ((AbstractLiborCovarianceModelWithInterpolation) getCovarianceModel()).getEvaluationTimeScalingFactor(evaluationTimeIndex);
 		
 		if(previousLiborIndex<0)	previousLiborIndex = (-previousLiborIndex-1)-1;	//i
 		double previousLiborTime 			= getLiborPeriod(previousLiborIndex);   //T_i
@@ -209,14 +218,14 @@ public class ExtensionLIBORMarketModelWithBridge extends LIBORMarketModel{
 		double shortPeriodLenght			= nextLiborTime	- processTime;
 		double alpha            			= (nextLiborTime - processTime) / periodLenght;
 		RandomVariableInterface startLibor	= getLIBOR(evaluationTimeIndex, previousLiborIndex); //L(T_i,T_i+1)
-		RandomVariableInterface bridge		= getBrownianBridge(previousLiborIndex, processTime);
+		RandomVariableInterface bridge		= getBrownianBridgeValue(previousLiborIndex, processTime);
 		RandomVariableInterface libor;
 		/*if(interpolationScheme == InterpolationScheme.LINEAR) {
 			libor = startLibor.mult(periodLenght).add(1.0).mult(alpha).add(1-alpha).mult(bridge.mult(evaluationTimeScalingFactor)).sub(1.0).div(shortPeriodLenght);
 		}*/
 		
 		if(interpolationScheme == InterpolationScheme.LOGLINEAR) {
-			libor = (startLibor.mult(periodLenght).add(1.0).log().mult(alpha).add(bridge.mult(evaluationTimeScalingFactor))).exp().sub(1.0).div(shortPeriodLenght);
+			libor = startLibor.mult(periodLenght).add(1.0).log().mult(alpha).add(bridge).exp().sub(1.0).div(shortPeriodLenght);
 		}
 		else { throw new UnsupportedOperationException("InterpolationScheme not supported!"); }
 		
@@ -238,40 +247,66 @@ public class ExtensionLIBORMarketModelWithBridge extends LIBORMarketModel{
 	 * @param time processTime.
 	 * @return BB(time)
 	 */
-	public RandomVariableInterface getBrownianBridge(int liborIndex, double time) {
+	public RandomVariableInterface getBrownianBridgeValue(int liborIndex, double time) throws CalculationException {
 		
 		if(brownianBridgeValues == null) {
 			brownianBridgeValues = new RandomVariableInterface[getNumberOfLibors()][];
 		}
 		//Lazy Init for each Brownian Bridge
 		if(brownianBridgeValues[liborIndex] == null) {
-		
+
 			double liborPeriodStart = getLiborPeriod(liborIndex);
 			double liborPeriodEnd   = getLiborPeriod(liborIndex + 1);
-			TimeDiscretizationInterface completeTimeDiscretization = getTimeDiscretization();
-			TimeDiscretizationInterface bridgeDiscretization    = new TimeDiscretization(
-					Arrays.copyOfRange(completeTimeDiscretization.getAsDoubleArray(), getTimeIndex(liborPeriodStart), getTimeIndex(liborPeriodEnd) + 1));
-			
-			BrownianBridgeWithVariance brownianBridge = new BrownianBridgeWithVariance(bridgeDiscretization, interpolationDriver, ((AbstractLiborCovarianceModelWithInterpolation) getCovarianceModel()).getVarianceForInterpolationPeriod(liborIndex),
-					getRandomVariableFactory());
-					//new BrownianBridgeWithVariance(bridgeDiscretization, getProcess().getNumberOfPaths(), getRandomVariableForConstant(0.0), getRandomVariableForConstant(0.0),
-					//covarianceModel.getVarianceForInterpolationPeriod(liborIndex));
-			
-			brownianBridgeValues[liborIndex] = new RandomVariableInterface[bridgeDiscretization.getNumberOfTimes()];
-			
-			RandomVariableInterface brownianBridgeValue = getRandomVariableForConstant(0.0);
-			brownianBridgeValues[liborIndex][0] = brownianBridgeValue;
-			int bridgeTimeIndex = bridgeDiscretization.getTimeIndex(time);
-			for (int timeIndex = 0; timeIndex < brownianBridgeValues[liborIndex].length - 1; timeIndex++) {
-				brownianBridgeValue = brownianBridge.getIncrement(timeIndex, 0).add(brownianBridgeValue);
-				brownianBridgeValues[liborIndex][timeIndex + 1] =  brownianBridgeValue;
-			}
-			return brownianBridgeValues[liborIndex][bridgeTimeIndex];
+			TimeDiscretizationInterface tempBridgeDiscretization    = new TimeDiscretization(
+					Arrays.copyOfRange(getTimeDiscretization().getAsDoubleArray(), getTimeIndex(liborPeriodStart), getTimeIndex(liborPeriodEnd) + 1));
+            brownianBridgeValues[liborIndex] = new RandomVariableInterface[tempBridgeDiscretization.getNumberOfTimeSteps()];
+
+            brownianBridgeValues[liborIndex][0] = getRandomVariableForConstant(0.0);
+            for(int bridgeTimeIndex = 1; bridgeTimeIndex<tempBridgeDiscretization.getNumberOfTimeSteps(); bridgeTimeIndex++) {
+                double currentTime	= tempBridgeDiscretization.getTime(bridgeTimeIndex);
+                double nextTime		= tempBridgeDiscretization.getTime(bridgeTimeIndex+1);
+                double alpha		= (nextTime-currentTime)/(liborPeriodEnd-currentTime);
+
+                int    generatorTimeIndex        = interpolationDriver.getTimeDiscretization().getTimeIndex(currentTime);
+                RandomVariableInterface variance = ((AbstractLiborCovarianceModelWithInterpolation)getCovarianceModel()).getVarianceForInterpolation(currentTime);
+
+                // Calculate the next point using the "scheme" of the Brownian bridge
+                brownianBridgeValues[liborIndex][bridgeTimeIndex] = brownianBridgeValues[liborIndex][bridgeTimeIndex-1].mult(1.0-alpha)
+                        .add(interpolationDriver.getBrownianIncrement(generatorTimeIndex, 0)
+                        .mult(variance.sqrt()).mult(Math.sqrt(1.0-alpha)));
+            }
 		}
 		int bridgeTimeIndex = getTimeIndex(time) - getTimeIndex(getLiborPeriod(liborIndex));
 		return brownianBridgeValues[liborIndex][bridgeTimeIndex];
 	}
-	
+
+    public RandomVariableInterface getBrownianBridgeAnalyticCovariance(double time1, double time2) {
+	    int liborPeriodEndIndex = getLiborPeriodIndex(time1);
+        {
+            int templiborPeriodEndIndex2 = getLiborPeriodIndex(time2);
+            if (liborPeriodEndIndex > 0 || templiborPeriodEndIndex2 > 0 || liborPeriodEndIndex != templiborPeriodEndIndex2)
+            	return getRandomVariableForConstant(0.0);
+        }
+        	liborPeriodEndIndex   = - liborPeriodEndIndex - 1;
+		double liborPeriodEndTime = getLiborPeriod(liborPeriodEndIndex);
+		int liborPeriodStartIndex = liborPeriodEndIndex - 1;
+		int lowerIndex 			  = Math.min(getTimeIndex(time1), getTimeIndex(time2));
+		int startTimeIndex		  = getTimeIndex(getLiborPeriod(liborPeriodStartIndex));
+		RandomVariableInterface covariance 		  = getRandomVariableForConstant(
+													(liborPeriodEndTime - time1) * (liborPeriodEndTime - time2) );
+
+
+		for (int j = startTimeIndex; j < lowerIndex; j++) {
+			RandomVariableInterface variance = ((AbstractLiborCovarianceModelWithInterpolation)getCovarianceModel()).getVarianceForInterpolation(j);
+			double currentTime = getTime(j);
+			double nextTime	   = getTime(j+1);
+			covariance = covariance.add(
+					variance.mult((nextTime - currentTime)/((liborPeriodEndTime - nextTime)*(liborPeriodEndTime - currentTime))) );
+		}
+		return covariance;
+    }
+
+
 	/*
 	@Override
 	public Object clone() {
@@ -350,18 +385,4 @@ public class ExtensionLIBORMarketModelWithBridge extends LIBORMarketModel{
 				+ ", measure=" + measure + ", stateSpace=" + stateSpace + "]";
 	}
 	*/
-	
-	public RandomVariableInterface getUnAdjustedNumeraire(double time) throws CalculationException {
-		int liborTimeIndex = getLiborPeriodIndex(time);
-		if(liborTimeIndex < 0) {
-			throw new UnsupportedOperationException("Unadjusted Numeraire only available for Tenortimes. Requested " + time + " not supported!" );
-		}
-		RandomVariableInterface unAdjustedNumeraire = getNumeraires().get(liborTimeIndex);
-		if(unAdjustedNumeraire == null) {
-			getNumeraire(time);
-			unAdjustedNumeraire = getNumeraires().get(liborTimeIndex);
-		}
-		return unAdjustedNumeraire;
-	}
-	
 }

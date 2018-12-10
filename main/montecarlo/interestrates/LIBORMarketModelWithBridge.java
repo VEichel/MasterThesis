@@ -1,16 +1,9 @@
 package montecarlo.interestrates;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-
 import montecarlo.interestrates.modelplugins.AbstractLiborCovarianceModelWithInterpolation;
 import net.finmath.exception.CalculationException;
 import net.finmath.functions.AnalyticFormulas;
 import net.finmath.marketdata.model.AnalyticModelInterface;
-import net.finmath.marketdata.model.curves.DiscountCurveFromForwardCurve;
 import net.finmath.marketdata.model.curves.DiscountCurveInterface;
 import net.finmath.marketdata.model.curves.ForwardCurveInterface;
 import net.finmath.marketdata.model.volatilities.AbstractSwaptionMarketData;
@@ -19,11 +12,7 @@ import net.finmath.marketdata.products.SwapAnnuity;
 import net.finmath.montecarlo.AbstractRandomVariableFactory;
 import net.finmath.montecarlo.BrownianMotionInterface;
 import net.finmath.montecarlo.RandomVariableFactory;
-import net.finmath.montecarlo.interestrate.LIBORMarketModel;
 import net.finmath.montecarlo.interestrate.LIBORMarketModel.CalibrationItem;
-import net.finmath.montecarlo.interestrate.LIBORMarketModel.Driftapproximation;
-import net.finmath.montecarlo.interestrate.LIBORMarketModel.Measure;
-import net.finmath.montecarlo.interestrate.LIBORMarketModel.StateSpace;
 import net.finmath.montecarlo.interestrate.LIBORMarketModelInterface;
 import net.finmath.montecarlo.interestrate.modelplugins.AbstractLIBORCovarianceModel;
 import net.finmath.montecarlo.interestrate.modelplugins.AbstractLIBORCovarianceModelParametric;
@@ -37,6 +26,12 @@ import net.finmath.time.RegularSchedule;
 import net.finmath.time.ScheduleInterface;
 import net.finmath.time.TimeDiscretization;
 import net.finmath.time.TimeDiscretizationInterface;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class LIBORMarketModelWithBridge extends AbstractModel implements LIBORMarketModelInterface {
 
@@ -99,7 +94,7 @@ public class LIBORMarketModelWithBridge extends AbstractModel implements LIBORMa
 			AbstractLiborCovarianceModelWithInterpolation		covarianceModel,
 			CalibrationItem[]									calibrationItems,
 			Map<String, ?>									 	properties,
-		
+
 			BrownianMotionInterface 							interpolationDriver
 			) throws CalculationException {
 
@@ -119,13 +114,13 @@ public class LIBORMarketModelWithBridge extends AbstractModel implements LIBORMa
 		this.covarianceModel		= covarianceModel;
 
 		this.interpolationDriver = interpolationDriver;
-		
+
 		double[] times = new double[liborPeriodDiscretization.getNumberOfTimeSteps()];
 		for(int i=0; i<times.length; i++) times[i] = liborPeriodDiscretization.getTime(i);
 
 		// Perform calibration, if data is given
 		if(calibrationItems != null && calibrationItems.length > 0) {
-			
+
 			AbstractLiborCovarianceModelWithInterpolation covarianceModelParametric = null;
 			try {
 				covarianceModelParametric = (AbstractLiborCovarianceModelWithInterpolation)covarianceModel;
@@ -205,7 +200,7 @@ public class LIBORMarketModelWithBridge extends AbstractModel implements LIBORMa
 
 				double[] fixingDates      = new double[numberOfPeriods];
 				double[] paymentDates     = new double[numberOfPeriods];
-				double[] swapTenorTimes   = new double[numberOfPeriods+1];
+				double[] swapTenorTimes   = new double[numberOfPeriods+1];z
 
 				for(int periodStartIndex=0; periodStartIndex<numberOfPeriods; periodStartIndex++) {
 					fixingDates[periodStartIndex] = exerciseDate + periodStartIndex * swapPeriodLength;

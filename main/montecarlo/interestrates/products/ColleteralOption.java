@@ -2,25 +2,16 @@ package montecarlo.interestrates.products;
 
 //TODO: for fixingOnLiborStart use change liborStartToEnd and dont use any libor. Numeraire is enough!
 
-import java.util.Arrays;
-
-import org.apache.commons.math3.analysis.function.Abs;
-import org.apache.commons.math3.genetics.GeneticAlgorithm;
-import org.apache.commons.math3.special.Erf;
-
 import montecarlo.interestrates.LIBORMarketModelWithBridge;
 import montecarlo.interestrates.modelplugins.AbstractLiborCovarianceModelWithInterpolation;
 import net.finmath.exception.CalculationException;
 import net.finmath.functions.AnalyticFormulas;
 import net.finmath.functions.NormalDistribution;
-import net.finmath.marketdata.model.AnalyticModelInterface;
 import net.finmath.montecarlo.RandomVariable;
-import net.finmath.montecarlo.RandomVariableFactory;
-import net.finmath.montecarlo.interestrate.LIBORMarketModel;
-import net.finmath.montecarlo.interestrate.LIBORMarketModelInterface;
 import net.finmath.montecarlo.interestrate.LIBORModelMonteCarloSimulationInterface;
 import net.finmath.montecarlo.interestrate.products.AbstractLIBORMonteCarloProduct;
 import net.finmath.stochastic.RandomVariableInterface;
+import org.apache.commons.math3.special.Erf;
 
 
 public class ColleteralOption extends AbstractLIBORMonteCarloProduct {
@@ -176,7 +167,7 @@ public class ColleteralOption extends AbstractLIBORMonteCarloProduct {
 		    }
 			//Finished BB Variance calculations
 			
-		    //temporär:
+		    //temporï¿½r:
 		    bridgeVarianceAtFixing = interpolationModel.getBrownianBridge(liborStartIndexFixing, fixingDate).getVariance();
 		    bridgeVarianceAtPayment = interpolationModel.getBrownianBridge(liborStartIndexPayment, paymentDate).getVariance();
 		    bridgeCovariance = interpolationModel.getBrownianBridge(liborStartIndexFixing, fixingDate).mult(interpolationModel.getBrownianBridge(liborStartIndexPayment, paymentDate)).getAverage();
