@@ -5,9 +5,7 @@ import montecarlo.interestrates.modelplugins.AbstractLiborCovarianceModelWithInt
 import montecarlo.interestrates.modelplugins.LiborCovarianceModelWithInterpolation;
 import montecarlo.interestrates.modelplugins.LiborCovarianceModelWithInterpolation.EvaluationTimeScalingScheme;
 import montecarlo.interestrates.modelplugins.LiborCovarianceModelWithInterpolation.InterpolationVarianceScheme;
-import montecarlo.interestrates.products.ColleteralOption;
-import net.finmath.analytic.model.curves.DiscountCurveInterface;
-import net.finmath.analytic.model.curves.ForwardCurveInterface;
+import montecarlo.interestrates.products.CollateralOption;
 import net.finmath.exception.CalculationException;
 import net.finmath.marketdata.model.AnalyticModelInterface;
 import net.finmath.marketdata.model.curves.DiscountCurveFromForwardCurve;
@@ -77,14 +75,14 @@ public class AnalyticFormulaColleteralTest {
 		
 		//Non Analytic:
 		long beforeNonAnalyticMillis = System.currentTimeMillis();
-		ColleteralOption colleteralOptionNonAnalytic = new ColleteralOption(fixingDate, paymentDate, strike, false);
-		double colleteralNonAnalyticPrice = colleteralOptionNonAnalytic.getValue(evaluationTime, LMMBB).getAverage();
+		CollateralOption collateralOptionNonAnalytic = new CollateralOption(fixingDate, paymentDate, strike, false);
+		double colleteralNonAnalyticPrice = collateralOptionNonAnalytic.getValue(evaluationTime, LMMBB).getAverage();
 		long afterNonAnalyticMillis	 = System.currentTimeMillis();
 		
 		//Analytic
 		long beforeAnalyticMillis = System.currentTimeMillis();
-		ColleteralOption colleteralOptionAnalytic	 = new ColleteralOption(fixingDate, paymentDate, strike, true);
-		double colleteralAnalyticPrice = colleteralOptionAnalytic.getValue(evaluationTime, LMMBB).getAverage();
+		CollateralOption collateralOptionAnalytic = new CollateralOption(fixingDate, paymentDate, strike, true);
+		double colleteralAnalyticPrice = collateralOptionAnalytic.getValue(evaluationTime, LMMBB).getAverage();
 		long afterAnalyticMillis = System.currentTimeMillis();
 		
 		
@@ -95,7 +93,7 @@ public class AnalyticFormulaColleteralTest {
 		System.out.println("NonAnalytic Computation Time: " + (afterNonAnalyticMillis - beforeNonAnalyticMillis) + "ms");
 		System.out.println("   Analytic Computation Time: " + (afterAnalyticMillis - beforeAnalyticMillis) + "ms");
 
-		/*System.out.println(colleteralOptionNonAnalytic.getValue(evaluationTime, LMMBB) + "\t" + colleteralOptionAnalytic.getValue(evaluationTime, LMMBB));*/
+		/*System.out.println(collateralOptionNonAnalytic.getValue(evaluationTime, LMMBB) + "\t" + collateralOptionAnalytic.getValue(evaluationTime, LMMBB));*/
 	}
 	
 	

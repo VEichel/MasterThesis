@@ -14,7 +14,7 @@ import net.finmath.stochastic.RandomVariableInterface;
 import org.apache.commons.math3.special.Erf;
 
 
-public class ColleteralOption extends AbstractLIBORMonteCarloProduct {
+public class CollateralOption extends AbstractLIBORMonteCarloProduct {
 	
 	
 
@@ -22,9 +22,8 @@ public class ColleteralOption extends AbstractLIBORMonteCarloProduct {
 	private final double  paymentDate;
 	private final double  strike;
 	private       boolean useAnalyticFormula;
-	;
 
-	public ColleteralOption(
+	public CollateralOption(
 			double fixingDate,
 			double paymentDate,
 			double strike,
@@ -37,7 +36,13 @@ public class ColleteralOption extends AbstractLIBORMonteCarloProduct {
 		this.useAnalyticFormula = useAnalyticFormula;
 	}
 
-
+	public CollateralOption(
+			double fixingDate,
+			double paymentDate,
+			double strike
+	) {
+		this(fixingDate, paymentDate, strike, false);
+	}
 
 	@Override
 	public RandomVariableInterface getValue(double evaluationTime, LIBORModelMonteCarloSimulationInterface model) throws CalculationException {

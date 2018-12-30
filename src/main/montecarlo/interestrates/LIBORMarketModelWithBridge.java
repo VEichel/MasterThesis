@@ -200,7 +200,7 @@ public class LIBORMarketModelWithBridge extends AbstractModel implements LIBORMa
 
 				double[] fixingDates      = new double[numberOfPeriods];
 				double[] paymentDates     = new double[numberOfPeriods];
-				double[] swapTenorTimes   = new double[numberOfPeriods+1];z
+				double[] swapTenorTimes   = new double[numberOfPeriods+1];
 
 				for(int periodStartIndex=0; periodStartIndex<numberOfPeriods; periodStartIndex++) {
 					fixingDates[periodStartIndex] = exerciseDate + periodStartIndex * swapPeriodLength;
