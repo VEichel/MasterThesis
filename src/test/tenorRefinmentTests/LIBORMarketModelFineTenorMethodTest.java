@@ -5,6 +5,7 @@
  */
 package tenorRefinmentTests;
 
+import montecarlo.interestrates.ExtensionLMMWithDeterministicInterpolation;
 import montecarlo.interestrates.products.CollateralOption;
 import net.finmath.exception.CalculationException;
 import net.finmath.marketdata.calibration.ParameterObjectInterface;
@@ -56,7 +57,7 @@ public class LIBORMarketModelFineTenorMethodTest {
 	private final int    numberOfFactors	= 1;
 	private final double lastTime 			= 10.0;
 	private final double simulationDt 		= .25;
-	private final double liborDt			= 1;
+	private final double liborDt			= 1.0;
 
 	private static DecimalFormat formatterValue		= new DecimalFormat(" ##0.0000%;-##0.0000%", new DecimalFormatSymbols(Locale.ENGLISH));
 	private static DecimalFormat formatterParam		= new DecimalFormat(" #0.00000;-#0.00000", new DecimalFormatSymbols(Locale.ENGLISH));
@@ -68,6 +69,8 @@ public class LIBORMarketModelFineTenorMethodTest {
 	public static void main(String[] args) throws CalculationException, SolverException {
 		LIBORMarketModelFineTenorMethodTest test = new LIBORMarketModelFineTenorMethodTest();
 		test.testCoarseCollateralOptions();
+		test.testDeterministicInterpolatedCollateralOptions(ExtensionLMMWithDeterministicInterpolation.InterpolationScheme.LINEAR);
+		test.testDeterministicInterpolatedCollateralOptions(ExtensionLMMWithDeterministicInterpolation.InterpolationScheme.LOGLINEAR);
 		System.exit(0);
 	}
 
@@ -89,6 +92,29 @@ public class LIBORMarketModelFineTenorMethodTest {
 			System.out.println(value);
 		}
 
+	}
+
+	public void testDeterministicInterpolatedCollateralOptions(ExtensionLMMWithDeterministicInterpolation.InterpolationScheme interpolationScheme) throws CalculationException, SolverException {
+
+		LIBORModelMonteCarloSimulationInterface coarseLiborSimulation = getCalibratedBaseLIBORMarketModel();
+		TimeDiscretizationInterface timeDiscretization = coarseLiborSimulation.getTimeDiscretization();
+
+		LIBORMarketModelInterface interpolatedModel = new ExtensionLMMWithDeterministicInterpolation((LIBORMarketModel) coarseLiborSimulation.getModel(), interpolationScheme);
+		LIBORModelMonteCarloSimulation interpolatedSimulation = new LIBORModelMonteCarloSimulation(interpolatedModel, coarseLiborSimulation.getProcess().clone());
+		CollateralOption[] coarseCollateralOptions = new CollateralOption[timeDiscretization.getNumberOfTimeSteps()];
+
+		System.out.println("Option Values of " + interpolationScheme.toString() + " Model:");
+		for(int timeIndex = 0; timeIndex < timeDiscretization.getNumberOfTimeSteps(); timeIndex++)
+		{
+			double currentTime = timeDiscretization.getTime(timeIndex);
+			double nextTime    = timeDiscretization.getTime(timeIndex + 1);
+			double strike      = (interpolatedSimulation.getNumeraire(nextTime).div(interpolatedSimulation.getNumeraire(currentTime))
+					.getAverage() - 1) / (nextTime - currentTime);
+			coarseCollateralOptions[timeIndex] = new CollateralOption(currentTime, nextTime, strike);
+			double value = coarseCollateralOptions[timeIndex].getValue(0.0, interpolatedSimulation).getAverage();
+			System.out.println(value);
+		}
+		System.out.println();
 	}
 
 	private CalibrationItem createCalibrationItem(double weight, double exerciseDate, double swapPeriodLength, int numberOfPeriods, double moneyness, double targetVolatility, String targetVolatilityType, ForwardCurveInterface forwardCurve, DiscountCurveInterface discountCurve) throws CalculationException {
