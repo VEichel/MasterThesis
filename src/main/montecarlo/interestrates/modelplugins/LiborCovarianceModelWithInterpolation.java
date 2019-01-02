@@ -20,8 +20,8 @@ public class LiborCovarianceModelWithInterpolation extends AbstractLiborCovarian
 		
 	
 	private final AbstractLIBORCovarianceModel	nonInterpolationModel;
-	private final InterpolationVarianceScheme interpolationVarianceScheme;
-	private final EvaluationTimeScalingScheme       evaluationTimeScalingScheme;
+	private final InterpolationVarianceScheme   interpolationVarianceScheme;
+	private final EvaluationTimeScalingScheme   evaluationTimeScalingScheme;
 	private final double[] interpolationParameters;
 	private final double[] evaluationTimeScalingParameters;
 	

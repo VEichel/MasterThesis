@@ -160,7 +160,7 @@ public class LIBORMarketModel extends AbstractModel implements LIBORMarketModelI
     private DiscountCurveInterface discountCurve;
 
     private final AbstractRandomVariableFactory randomVariableFactory;
-    private AbstractLIBORCovarianceModel covarianceModel;
+    public AbstractLIBORCovarianceModel covarianceModel;
 
     private AbstractSwaptionMarketData swaptionMarketData;
 
@@ -207,9 +207,25 @@ public class LIBORMarketModel extends AbstractModel implements LIBORMarketModelI
      * Shallow copy
      */
    public LIBORMarketModel(LIBORMarketModel liborMarketModel) throws CalculationException {
-
-        liborMarketModel.getCloneWithModifiedData(null);
-        liborMarketModel.
+        super();
+        super.setProcess(liborMarketModel.getProcess());
+        this.liborPeriodDiscretization = liborMarketModel.getLiborPeriodDiscretization();
+        this.forwardCurveName          = liborMarketModel.forwardCurveName;
+        this.curveModel                = liborMarketModel.getAnalyticModel().clone();
+        this.forwardRateCurve          = liborMarketModel.getForwardRateCurve();
+        this.discountCurve             = liborMarketModel.getDiscountCurve();
+        this.randomVariableFactory     = liborMarketModel.randomVariableFactory;
+        this.covarianceModel           = liborMarketModel.getCovarianceModel();
+        this.swaptionMarketData        = liborMarketModel.getSwaptionMarketData();
+        this.driftApproximationMethod  = liborMarketModel.getDriftApproximationMethod();
+        this.measure                   = liborMarketModel.getMeasure();
+        this.stateSpace                = liborMarketModel.stateSpace;
+        this.liborCap                  = liborMarketModel.liborCap;
+        this.integratedLIBORCovariance = liborMarketModel.getIntegratedLIBORCovariance();
+        this.integratedLIBORCovarianceLazyInitLock  = liborMarketModel.integratedLIBORCovarianceLazyInitLock;
+        this.numeraires                = liborMarketModel.numeraires;
+        this.numeraireAdjustments      = liborMarketModel.numeraireAdjustments;
+        this.numerairesProcess         = liborMarketModel.numerairesProcess;
     }
 
 

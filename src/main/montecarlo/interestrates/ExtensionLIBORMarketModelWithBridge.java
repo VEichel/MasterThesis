@@ -60,73 +60,7 @@ public class ExtensionLIBORMarketModelWithBridge extends LIBORMarketModel{
 		
 		return extensionLIBORMarketModelWithBridge;
 	}
-	
-//	@Override
-//	public RandomVariableInterface getNumeraire(double time) throws CalculationException {
-//		int liborTimeIndex = getLiborPeriodIndex(time);
-//		int timeIndex	   = Math.max(getTimeIndex(time), - getTimeIndex(time) - 1);
-//		
-//		if(liborTimeIndex < 0) {
-//			// Interpolation of Numeraire: log linear interpolation.
-//			int upperIndex = -liborTimeIndex-1;
-//			int lowerIndex = upperIndex-1;
-//			if(lowerIndex < 0) throw new IllegalArgumentException("Numeraire requested for time " + time + ". Unsupported");
-//
-//			/*RandomVariableInterface numeraire = getNumeraire(getLiborPeriod(upperIndex)).div( 
-//					getInterpolatedLibor(timeIndex , timeIndex).mult(getLiborPeriod(upperIndex) - time).add(1.0) );*/
-//			/*
-//			 * Adjust for discounting, i.e. funding or collateralization
-//			 */
-//			double upperTime    				= getLiborPeriod(upperIndex);   //T_i+1
-//			
-//			RandomVariableInterface numeraire   = getUnAdjustedNumeraire(upperTime).div(getLIBOR(time, time, upperTime).mult(upperTime - time).add(1.0));
-//
-//			
-//			
-//			RandomVariableInterface bridge		= getBrownianBridge(lowerIndex, time);
-//			RandomVariableInterface evaluationTimeScalingFactor = ((AbstractLiborCovarianceModelWithInterpolation) getCovarianceModel()).getEvaluationTimeScalingFactor(timeIndex);
-//			double lowerTime = getLiborPeriod(lowerIndex);
-//			double alpha = (upperTime - time) / (upperTime - lowerTime);
-//			
-//			double analyticLiborShortPeriod				= getForwardRateCurve().getForward(getAnalyticModel(), time, upperTime -time);
-//			double analyticLibor					 	= getForwardRateCurve().getForward(getAnalyticModel(), lowerTime, upperTime -lowerTime);
-//			double analyticInterpolatedOnePlusLiborDt		= Math.exp(Math.log(1 + analyticLibor * (upperTime - lowerTime)) * alpha);
-//			double analyticOnePlusLiborDt					= (1 + analyticLiborShortPeriod * (upperTime -time));
-//			double adjustment = analyticOnePlusLiborDt / analyticInterpolatedOnePlusLiborDt;
-//			RandomVariableInterface numeraire2 = (getUnAdjustedNumeraire(upperTime).log().mult(1 - alpha).add(getUnAdjustedNumeraire(lowerTime).log().mult(alpha))
-//					.sub(bridge.mult(evaluationTimeScalingFactor))).exp();
-//		    //numeraire = numeraire2;
-//			
-//			
-//			if(getDiscountCurve() != null) {
-//				// This includes a control for zero bonds
-//				double deterministicNumeraireAdjustment = numeraire.invert().getAverage() / getDiscountCurve().getDiscountFactor(getAnalyticModel(), time);
-//				numeraire = numeraire.mult(deterministicNumeraireAdjustment);
-//				//System.out.println("inLMM numeraireAdj interpol " + time + "\t" + deterministicNumeraireAdjustment);
-//				
-//				/*
-//				RandomVariableInterface bridge		= getBrownianBridge(lowerIndex, time);
-//				RandomVariableInterface evaluationTimeScalingFactor = covarianceModel.getEvaluationTimeScalingFactor(timeIndex);
-//				double lowerTime = getLiborPeriod(lowerIndex);
-//				double alpha = (upperTime - time) / (upperTime - lowerTime);
-//				
-//				double analyticLiborShortPeriod				= getForwardRateCurve().getForward(getAnalyticModel(), time, upperTime -time);
-//				double analyticLibor					 	= getForwardRateCurve().getForward(getAnalyticModel(), lowerTime, upperTime -lowerTime);
-//				double analyticInterpolatedOnePlusLiborDt		= Math.exp(Math.log(1 + analyticLibor * (upperTime - lowerTime)) * alpha);
-//				double analyticOnePlusLiborDt					= (1 + analyticLiborShortPeriod * (upperTime -time));
-//				double adjustment = analyticOnePlusLiborDt / analyticInterpolatedOnePlusLiborDt;
-//				RandomVariableInterface numeraire2 = (getUnAdjustedNumeraire(upperTime).log().mult(1 - alpha).add(getUnAdjustedNumeraire(lowerTime).log().mult(alpha))
-//						.sub(bridge.mult(evaluationTimeScalingFactor))).exp().div(adjustment);
-//				System.out.println(numeraire);
-//				System.out.println(numeraire2);
-//				*/
-//			}
-//
-//			return numeraire;
-//		}
-//		return super.getNumeraire(time);
-//	}
-	
+
 	@Override
 	public RandomVariableInterface getLIBOR(double time, double periodStart, double periodEnd)
 			throws CalculationException {
