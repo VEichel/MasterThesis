@@ -1318,6 +1318,16 @@ public class LIBORMarketModel extends AbstractModel implements LIBORMarketModelI
                 + ", driftApproximationMethod=" + driftApproximationMethod
                 + ", measure=" + measure + ", stateSpace=" + stateSpace + "]";
     }
+
+    public AbstractRandomVariableFactory getRandomVariableFactory() {
+        return randomVariableFactory;
+    }
+
+    public StateSpace getStateSpace() {
+        return stateSpace;
+    }
+
+
 }
 
 

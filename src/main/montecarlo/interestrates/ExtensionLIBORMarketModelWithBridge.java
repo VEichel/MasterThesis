@@ -1,9 +1,9 @@
 package montecarlo.interestrates;
 
-import montecarlo.interestrates.modelplugins.AbstractLiborCovarianceModelWithInterpolation;
-import montecarlo.interestrates.modelplugins.LiborCovarianceModelWithInterpolation;
-import montecarlo.interestrates.modelplugins.LiborCovarianceModelWithInterpolation.EvaluationTimeScalingScheme;
-import montecarlo.interestrates.modelplugins.LiborCovarianceModelWithInterpolation.InterpolationVarianceScheme;
+import montecarlo.interestrates.modelplugins.AbstractLIBORCovarianceModelWithInterpolation;
+import montecarlo.interestrates.modelplugins.LIBORCovarianceModelWithInterpolation;
+import montecarlo.interestrates.modelplugins.LIBORCovarianceModelWithInterpolation.EvaluationTimeScalingScheme;
+import montecarlo.interestrates.modelplugins.LIBORCovarianceModelWithInterpolation.InterpolationVarianceScheme;
 import net.finmath.exception.CalculationException;
 import net.finmath.marketdata.model.AnalyticModelInterface;
 import net.finmath.marketdata.model.curves.DiscountCurveInterface;
@@ -12,7 +12,6 @@ import net.finmath.montecarlo.AbstractRandomVariableFactory;
 import net.finmath.montecarlo.BrownianMotionInterface;
 import net.finmath.montecarlo.interestrate.LIBORMarketModel;
 import net.finmath.montecarlo.interestrate.modelplugins.AbstractLIBORCovarianceModel;
-import net.finmath.montecarlo.process.AbstractProcess;
 import net.finmath.montecarlo.process.ProcessEulerScheme;
 import net.finmath.stochastic.RandomVariableInterface;
 import net.finmath.time.TimeDiscretization;
@@ -52,7 +51,7 @@ public class ExtensionLIBORMarketModelWithBridge extends LIBORMarketModel{
 																							double[] interpolationParameters, double[] evaluationTimeScalingParameters,
 																							InterpolationVarianceScheme interpolationVarianceScheme, EvaluationTimeScalingScheme evaluationTimeScalingScheme) {
 		
-		AbstractLiborCovarianceModelWithInterpolation newCovarianceModel = new LiborCovarianceModelWithInterpolation(liborMarketModel.getCovarianceModel(), evaluationTimeScalingParameters,
+		AbstractLIBORCovarianceModelWithInterpolation newCovarianceModel = new LIBORCovarianceModelWithInterpolation(liborMarketModel.getCovarianceModel(), evaluationTimeScalingParameters,
 																					evaluationTimeScalingParameters, interpolationVarianceScheme, evaluationTimeScalingScheme, true);
 		ExtensionLIBORMarketModelWithBridge extensionLIBORMarketModelWithBridge = (ExtensionLIBORMarketModelWithBridge) liborMarketModel.getCloneWithModifiedCovarianceModel(newCovarianceModel);
 		
@@ -143,7 +142,7 @@ public class ExtensionLIBORMarketModelWithBridge extends LIBORMarketModel{
 		int    previousLiborIndex = getLiborPeriodIndex(processTime); 
 		
 		//if(previousLiborIndex>=0) throw new UnsupportedOperationException("This method is only for inner period LIBORs!");
-		//RandomVariableInterface evaluationTimeScalingFactor = ((AbstractLiborCovarianceModelWithInterpolation) getCovarianceModel()).getEvaluationTimeScalingFactor(evaluationTimeIndex);
+		//RandomVariableInterface evaluationTimeScalingFactor = ((AbstractLIBORCovarianceModelWithInterpolation) getCovarianceModel()).getEvaluationTimeScalingFactor(evaluationTimeIndex);
 		
 		if(previousLiborIndex<0)	previousLiborIndex = (-previousLiborIndex-1)-1;	//i
 		double previousLiborTime 			= getLiborPeriod(previousLiborIndex);   //T_i
@@ -202,7 +201,7 @@ public class ExtensionLIBORMarketModelWithBridge extends LIBORMarketModel{
                 double alpha		= (nextTime-currentTime)/(liborPeriodEnd-currentTime);
 
                 int    generatorTimeIndex        = interpolationDriver.getTimeDiscretization().getTimeIndex(currentTime);
-                RandomVariableInterface variance = ((AbstractLiborCovarianceModelWithInterpolation)getCovarianceModel()).getVarianceForInterpolation(currentTime);
+                RandomVariableInterface variance = ((AbstractLIBORCovarianceModelWithInterpolation)getCovarianceModel()).getVarianceForInterpolation(currentTime);
 
                 // Calculate the next point using the "scheme" of the Brownian bridge
                 brownianBridgeValues[liborIndex][bridgeTimeIndex] = brownianBridgeValues[liborIndex][bridgeTimeIndex-1].mult(1.0-alpha)
@@ -231,7 +230,7 @@ public class ExtensionLIBORMarketModelWithBridge extends LIBORMarketModel{
 
 
 		for (int j = startTimeIndex; j < lowerIndex; j++) {
-			RandomVariableInterface variance = ((AbstractLiborCovarianceModelWithInterpolation)getCovarianceModel()).getVarianceForInterpolation(j);
+			RandomVariableInterface variance = ((AbstractLIBORCovarianceModelWithInterpolation)getCovarianceModel()).getVarianceForInterpolation(j);
 			double currentTime = getTime(j);
 			double nextTime	   = getTime(j+1);
 			covariance = covariance.add(
@@ -260,7 +259,7 @@ public class ExtensionLIBORMarketModelWithBridge extends LIBORMarketModel{
 	public LIBORMarketModelWithBridge getCloneWithModifiedCovarianceModel(AbstractLIBORCovarianceModel covarianceModel) {
 		LIBORMarketModelWithBridge model = (LIBORMarketModelWithBridge)this.clone();
 		try {
-			model.covarianceModel = (AbstractLiborCovarianceModelWithInterpolation) covarianceModel;
+			model.covarianceModel = (AbstractLIBORCovarianceModelWithInterpolation) covarianceModel;
 		} catch (Exception exception) {
 			throw exception;
 		}
@@ -273,7 +272,7 @@ public class ExtensionLIBORMarketModelWithBridge extends LIBORMarketModel{
 		AnalyticModelInterface			analyticModel				= this.curveModel;
 		ForwardCurveInterface			forwardRateCurve			= this.forwardRateCurve;
 		DiscountCurveInterface			discountCurve				= this.discountCurve;
-		AbstractLiborCovarianceModelWithInterpolation	covarianceModel				= this.covarianceModel;
+		AbstractLIBORCovarianceModelWithInterpolation	covarianceModel				= this.covarianceModel;
 		AbstractSwaptionMarketData		swaptionMarketData			= null;		// No recalibration, unless new swaption data is specified
 		Map<String, Object>				properties					= new HashMap<String, Object>();
 		properties.put("measure",		measure.name());
@@ -293,7 +292,7 @@ public class ExtensionLIBORMarketModelWithBridge extends LIBORMarketModel{
 			throw new RuntimeException("Forward rate shift clone currently disabled.");
 		}
 		if(dataModified.containsKey("covarianceModel")) {
-			covarianceModel = (AbstractLiborCovarianceModelWithInterpolation)dataModified.get("covarianceModel");
+			covarianceModel = (AbstractLIBORCovarianceModelWithInterpolation)dataModified.get("covarianceModel");
 		}
 		if(dataModified.containsKey("swaptionMarketData")) {
 			swaptionMarketData = (AbstractSwaptionMarketData)dataModified.get("swaptionMarketData");

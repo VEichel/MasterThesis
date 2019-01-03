@@ -4,9 +4,9 @@ import net.finmath.montecarlo.interestrate.modelplugins.AbstractLIBORCovarianceM
 import net.finmath.stochastic.RandomVariableInterface;
 import net.finmath.time.TimeDiscretizationInterface;
 
-public abstract class AbstractLiborCovarianceModelWithInterpolation extends AbstractLIBORCovarianceModelParametric {
+public abstract class AbstractLIBORCovarianceModelWithInterpolation extends AbstractLIBORCovarianceModelParametric {
 
-	public AbstractLiborCovarianceModelWithInterpolation(TimeDiscretizationInterface timeDiscretization, TimeDiscretizationInterface liborPeriodDiscretization, int numberOfFactors) {
+	public AbstractLIBORCovarianceModelWithInterpolation(TimeDiscretizationInterface timeDiscretization, TimeDiscretizationInterface liborPeriodDiscretization, int numberOfFactors) {
 		super(timeDiscretization, liborPeriodDiscretization, numberOfFactors);
 	}
 	

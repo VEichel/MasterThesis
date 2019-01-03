@@ -1,31 +1,27 @@
 package montecarlo.interestrates;
 
-import com.sun.xml.internal.bind.v2.TODO;
-import montecarlo.interestrates.modelplugins.AbstractLiborCovarianceModelWithInterpolation;
-import montecarlo.interestrates.modelplugins.LiborCovarianceModelWithInterpolation;
+import montecarlo.interestrates.modelplugins.AbstractLIBORCovarianceModelWithInterpolation;
+import montecarlo.interestrates.modelplugins.LIBORCovarianceModelWithInterpolation;
 import net.finmath.exception.CalculationException;
 import net.finmath.marketdata.model.AnalyticModelInterface;
 import net.finmath.marketdata.model.curves.DiscountCurveInterface;
 import net.finmath.marketdata.model.curves.ForwardCurveInterface;
 import net.finmath.montecarlo.AbstractRandomVariableFactory;
-import net.finmath.montecarlo.BrownianMotion;
 import net.finmath.montecarlo.BrownianMotionInterface;
 import net.finmath.montecarlo.RandomVariableFactory;
 import net.finmath.montecarlo.interestrate.modelplugins.AbstractLIBORCovarianceModel;
-import net.finmath.montecarlo.process.ProcessEulerScheme;
+import net.finmath.montecarlo.interestrate.modelplugins.LIBORCovarianceModelCalibrateable;
+import net.finmath.montecarlo.interestrate.products.AbstractLIBORMonteCarloProduct;
 import net.finmath.stochastic.RandomVariableInterface;
 import net.finmath.time.TimeDiscretization;
 import net.finmath.time.TimeDiscretizationInterface;
-import org.apache.commons.math3.stat.correlation.Covariance;
 
-import javax.activation.UnsupportedDataTypeException;
 import java.lang.reflect.Field;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Random;
 
-public class ExtensionLMMWithDeterministicInterpolation extends LIBORMarketModel {
+public class ExtensionLMMWithInterpolation extends LIBORMarketModel {
 
     public enum InterpolationScheme {
         LINEAR_STOCHASTIK, LOGLINEAR_STOCHASTIK, LINEAR, LOGLINEAR;
@@ -83,12 +79,53 @@ public class ExtensionLMMWithDeterministicInterpolation extends LIBORMarketModel
         }
     }
 
-    public void initialize(BrownianMotionInterface interpolationDriver, InterpolationScheme interpolationScheme) {
+    public ExtensionLMMWithInterpolation getCalibrated(CalibrationItem[] calibrationItems, Map<?,?> properties) throws CalculationException {
+
+        Map<String,Object> calibrationParameters = null;
+        if(properties != null) {
+            if(properties.containsKey("calibrationParameters")) {
+                calibrationParameters = (Map<String, Object>) properties.get("calibrationParameters");
+            }
+            else {
+                calibrationParameters = (Map<String, Object>) properties;
+            }
+        }
+
+        // Perform calibration, if data is given
+        if(calibrationItems != null && calibrationItems.length > 0) {
+            LIBORCovarianceModelCalibrateable covarianceModelParametric = null;
+            try {
+                covarianceModelParametric = (LIBORCovarianceModelCalibrateable)getCovarianceModel();
+            }
+            catch(Exception e) {
+                throw new ClassCastException("Calibration restricted to covariance models implementing LIBORCovarianceModelCalibrateable.");
+            }
+
+            // @TODO Should be more elegant. Convert array for constructor
+            AbstractLIBORMonteCarloProduct[]	calibrationProducts		= new AbstractLIBORMonteCarloProduct[calibrationItems.length];
+            RandomVariableInterface[]			calibrationTargetValues	= new RandomVariableInterface[calibrationItems.length];
+            double[]							calibrationWeights		= new double[calibrationItems.length];
+            for(int i=0; i<calibrationTargetValues.length; i++) {
+                calibrationProducts[i]		= calibrationItems[i].calibrationProduct;
+                calibrationTargetValues[i]	= getRandomVariableFactory().createRandomVariable(calibrationItems[i].calibrationTargetValue);
+                calibrationWeights[i]		= calibrationItems[i].calibrationWeight;
+            }
+
+            AbstractLIBORCovarianceModel covarianceModel = (AbstractLIBORCovarianceModel) covarianceModelParametric.getCloneCalibrated(this, calibrationProducts, calibrationTargetValues, calibrationWeights, calibrationParameters);
+            return this.getCloneWithModifiedCovarianceModel(covarianceModel);
+        }
+        throw new NullPointerException("No CalibrationData given!");
+    }
+
+
+    private void initialize(BrownianMotionInterface interpolationDriver, InterpolationScheme interpolationScheme) {
         this.interpolationScheme = interpolationScheme;
         this.interpolationDriver = interpolationDriver;
+        //Prepare for drift adjustment.
         if(interpolationScheme.needDriftAdjustment()) {
             interpolationDriftAdjustmenstLog = new RandomVariableInterface[getNumberOfLibors()];
         }
+        //Check if everthing is fine for Stochastic interpolated model.
         if(interpolationScheme.needBrownianBridge()) {
             if(interpolationDriver != null) {
                 brownianBridgeValues = new RandomVariableInterface[getNumberOfLibors()][];
@@ -97,7 +134,7 @@ public class ExtensionLMMWithDeterministicInterpolation extends LIBORMarketModel
                 throw new NullPointerException("Interpolation is stochastic, but no driver given!");
             }
             //@TODO nicer
-            if(AbstractLiborCovarianceModelWithInterpolation.class.isInstance(getCovarianceModel().getClass())) {
+            if(AbstractLIBORCovarianceModelWithInterpolation.class.isInstance(getCovarianceModel().getClass())) {
                 throw new IllegalArgumentException("Covariance Model must be Interpolation Covariance Model!");
             }
         }
@@ -107,46 +144,139 @@ public class ExtensionLMMWithDeterministicInterpolation extends LIBORMarketModel
         }
     }
 
-    public ExtensionLMMWithDeterministicInterpolation(
+    /**
+     * Standard Constructor
+     * @param liborPeriodDiscretization
+     * @param analyticModel
+     * @param forwardRateCurve
+     * @param discountCurve
+     * @param randomVariableFactory
+     * @param covarianceModel
+     * @param properties
+     * @param interpolationScheme
+     * @param interpolationDriver
+     * @throws CalculationException
+     */
+    public ExtensionLMMWithInterpolation(
             TimeDiscretizationInterface liborPeriodDiscretization,
             AnalyticModelInterface analyticModel,
             ForwardCurveInterface forwardRateCurve,
             DiscountCurveInterface discountCurve,
             AbstractRandomVariableFactory randomVariableFactory,
             AbstractLIBORCovarianceModel covarianceModel,
-            CalibrationItem[] calibrationItems, Map<String, ?> properties,
+            Map<String, ?> properties,
             InterpolationScheme interpolationScheme,
             BrownianMotionInterface interpolationDriver) throws CalculationException {
+
         super(liborPeriodDiscretization, analyticModel, forwardRateCurve, discountCurve, randomVariableFactory,
-                covarianceModel, calibrationItems, properties);
+                covarianceModel, null, properties);
         initialize(interpolationDriver, interpolationScheme);
     }
 
-    public ExtensionLMMWithDeterministicInterpolation(LIBORMarketModel liborMarketModel,
-                                                      InterpolationScheme interpolationScheme,
-                                                      BrownianMotionInterface interpolationDriver,
-                                                      AbstractLIBORCovarianceModel covarianceModel)
-                                                         throws CalculationException {
-        super(liborMarketModel);
-        this.covarianceModel = covarianceModel;
+    /**
+     * Standard constructor building new Covariance Model
+     *
+     * @param liborPeriodDiscretization
+     * @param analyticModel
+     * @param forwardRateCurve
+     * @param discountCurve
+     * @param randomVariableFactory
+     * @param nonInterpolationCovarianceModel
+     * @param properties
+     * @param interpolationScheme
+     * @param interpolationDriver
+     * @param interpolationParameters
+     * @param evaluationTimeScalingParameters
+     * @param interpolationVarianceScheme
+     * @param evaluationTimeScalingScheme
+     * @param nonInterpolatioCovarianceModelCalibrated
+     * @throws CalculationException
+     */
+    public ExtensionLMMWithInterpolation(
+            TimeDiscretizationInterface liborPeriodDiscretization,
+            AnalyticModelInterface analyticModel,
+            ForwardCurveInterface forwardRateCurve,
+            DiscountCurveInterface discountCurve,
+            AbstractRandomVariableFactory randomVariableFactory,
+            AbstractLIBORCovarianceModel nonInterpolationCovarianceModel,
+            Map<String, ?> properties,
+            InterpolationScheme interpolationScheme,
+            BrownianMotionInterface interpolationDriver,
+            double[] interpolationParameters,
+            double[] evaluationTimeScalingParameters,
+            LIBORCovarianceModelWithInterpolation.InterpolationVarianceScheme interpolationVarianceScheme,
+            LIBORCovarianceModelWithInterpolation.EvaluationTimeScalingScheme evaluationTimeScalingScheme,
+            boolean nonInterpolatioCovarianceModelCalibrated) throws CalculationException {
+
+        super(liborPeriodDiscretization, analyticModel, forwardRateCurve, discountCurve, randomVariableFactory,
+                new LIBORCovarianceModelWithInterpolation(nonInterpolationCovarianceModel,interpolationParameters,
+                        evaluationTimeScalingParameters, interpolationVarianceScheme, evaluationTimeScalingScheme,
+                        nonInterpolatioCovarianceModelCalibrated),
+                null, properties);
         initialize(interpolationDriver, interpolationScheme);
     }
 
-    public static ExtensionLMMWithDeterministicInterpolation constructFromLIBORMarketModel(LIBORMarketModel liborMarketModel,
-                                                      InterpolationScheme interpolationScheme,
-                                                      BrownianMotionInterface interpolationDriver,
-                                                      double[] interpolationParameters,
-                                                      double[] evaluationTimeScalingParameters,
-                                                      LiborCovarianceModelWithInterpolation.InterpolationVarianceScheme interpolationVarianceScheme,
-                                                      LiborCovarianceModelWithInterpolation.EvaluationTimeScalingScheme evaluationTimeScalingScheme)
-                                                        throws CalculationException {
-        if(interpolationScheme.needBrownianBridge()) {
-            AbstractLiborCovarianceModelWithInterpolation newCovarianceModel = new LiborCovarianceModelWithInterpolation(liborMarketModel.getCovarianceModel(), interpolationParameters,
-                    evaluationTimeScalingParameters, interpolationVarianceScheme, evaluationTimeScalingScheme, true);
-            return new ExtensionLMMWithDeterministicInterpolation(liborMarketModel, interpolationScheme, interpolationDriver, newCovarianceModel);
-        }
-        return new ExtensionLMMWithDeterministicInterpolation(liborMarketModel, interpolationScheme, interpolationDriver, liborMarketModel.getCovarianceModel());
+    public static ExtensionLMMWithInterpolation constructDeterministicFromLMM(LIBORMarketModel liborMarketModel,
+                                                                             InterpolationScheme interpolationScheme)
+            throws CalculationException {
+        Map<String, Object>				properties					= new HashMap<>();
+        properties.put("measure",		liborMarketModel.getMeasure().name());
+        properties.put("stateSpace",	liborMarketModel.getStateSpace().name());
+
+        return new ExtensionLMMWithInterpolation(liborMarketModel.getLiborPeriodDiscretization(),
+                liborMarketModel.getAnalyticModel(),
+                liborMarketModel.getForwardRateCurve(),
+                liborMarketModel.getDiscountCurve(),
+                liborMarketModel.getRandomVariableFactory(),
+                liborMarketModel.getCovarianceModel(),
+                properties, interpolationScheme, null);
     }
+
+
+//not used as covariance model must be public    /**
+//     * @param liborMarketModel
+//     * @param interpolationScheme
+//     * @param interpolationDriver
+//     * @param covarianceModel
+//     * @throws CalculationException
+//     */
+//    public ExtensionLMMWithInterpolation(LIBORMarketModel liborMarketModel,
+//                                         InterpolationScheme interpolationScheme,
+//                                         BrownianMotionInterface interpolationDriver,
+//                                         AbstractLIBORCovarianceModel covarianceModel) throws CalculationException {
+//
+//        super(liborMarketModel);
+//        this.covarianceModel = covarianceModel;
+//        initialize(interpolationDriver, interpolationScheme);
+//    }
+
+//not used as covariance model must be public    /**
+//     * No recalibration done
+//     * @param liborMarketModel
+//     * @param interpolationScheme
+//     * @param interpolationDriver
+//     * @param interpolationParameters
+//     * @param evaluationTimeScalingParameters
+//     * @param interpolationVarianceScheme
+//     * @param evaluationTimeScalingScheme
+//     * @return
+//     * @throws CalculationException
+//     */
+//    public static ExtensionLMMWithInterpolation constructFromLIBORMarketModel(LIBORMarketModel liborMarketModel,
+//                                                                              InterpolationScheme interpolationScheme,
+//                                                                              BrownianMotionInterface interpolationDriver,
+//                                                                              double[] interpolationParameters,
+//                                                                              double[] evaluationTimeScalingParameters,
+//                                                                              LIBORCovarianceModelWithInterpolation.InterpolationVarianceScheme interpolationVarianceScheme,
+//                                                                              LIBORCovarianceModelWithInterpolation.EvaluationTimeScalingScheme evaluationTimeScalingScheme)
+//                                                        throws CalculationException {
+//        if(interpolationScheme.needBrownianBridge()) {
+//            AbstractLIBORCovarianceModelWithInterpolation newCovarianceModel = new LIBORCovarianceModelWithInterpolation(liborMarketModel.getCovarianceModel(), interpolationParameters,
+//                    evaluationTimeScalingParameters, interpolationVarianceScheme, evaluationTimeScalingScheme, true);
+//            return new ExtensionLMMWithInterpolation(liborMarketModel, interpolationScheme, interpolationDriver, newCovarianceModel);
+//        }
+//        return new ExtensionLMMWithInterpolation(liborMarketModel, interpolationScheme, interpolationDriver, liborMarketModel.getCovarianceModel());
+//    }
 
     @Override
     public RandomVariableInterface getLIBOR(int timeIndex, int liborIndex) throws CalculationException {
@@ -165,11 +295,9 @@ public class ExtensionLMMWithDeterministicInterpolation extends LIBORMarketModel
             int nextPeriodEndIndex = -periodEndIndex - 1;
             double nextPeriodEnd   = getLiborPeriod(nextPeriodEndIndex);
 
-            RandomVariableInterface longOnePlusLibordt = getRandomVariableForConstant(1.0);
-            if(nextPeriodEnd != periodStart) {
-                longOnePlusLibordt         = getLIBOR(time, periodStart, nextPeriodEnd).mult(nextPeriodEnd - periodStart).add(1.0);
-            }
-            RandomVariableInterface interpolatedOnePlusLibordt = getInterpolatedLIBOR(time, periodStart).mult(nextPeriodEnd - periodEnd).add(1.0);
+            RandomVariableInterface longOnePlusLibordt         = getLIBOR(time, periodStart, nextPeriodEnd).mult(nextPeriodEnd - periodStart).add(1.0);
+
+            RandomVariableInterface interpolatedOnePlusLibordt = getInterpolatedLIBOR(time, periodEnd).mult(nextPeriodEnd - periodEnd).add(1.0);
 
             return longOnePlusLibordt.div(interpolatedOnePlusLibordt).sub(1.0).div(periodEnd - periodStart);
         }
@@ -208,10 +336,10 @@ public class ExtensionLMMWithDeterministicInterpolation extends LIBORMarketModel
 
         RandomVariableInterface bridge = getRandomVariableForConstant(0.0);
         if(interpolationScheme.needBrownianBridge()) {
-            RandomVariableInterface timeScaling = ((AbstractLiborCovarianceModelWithInterpolation)getCovarianceModel())
-                                                        .getEvaluationTimeScalingFactor(time);
-            bridge = getBrownianBridgeValue(previousLIBORIndex, periodStart)
-                                                .sub(getBrownianBridgeAnalyticCovariance(time, time)).mult(timeScaling);
+            RandomVariableInterface timeScaling = ((AbstractLIBORCovarianceModelWithInterpolation)getCovarianceModel())
+                                                        .getEvaluationTimeScalingFactor(time).mult(0.001);
+            bridge = (getBrownianBridgeValue(previousLIBORIndex, periodStart)
+                                                .sub(getBrownianBridgeAnalyticCovariance(time, time).div(2.0))).mult(timeScaling);
 
         }
 
@@ -302,7 +430,7 @@ public class ExtensionLMMWithDeterministicInterpolation extends LIBORMarketModel
                 double alpha		= (nextTime-currentTime)/(liborPeriodEnd-currentTime);
 
                 int    generatorTimeIndex        = interpolationDriver.getTimeDiscretization().getTimeIndex(currentTime);
-                RandomVariableInterface variance = ((AbstractLiborCovarianceModelWithInterpolation)getCovarianceModel()).getVarianceForInterpolation(currentTime);
+                RandomVariableInterface variance = ((AbstractLIBORCovarianceModelWithInterpolation)getCovarianceModel()).getVarianceForInterpolation(currentTime);
 
                 // Calculate the next point using the "scheme" of the Brownian bridge
                 brownianBridgeValues[liborIndex][bridgeTimeIndex] = brownianBridgeValues[liborIndex][bridgeTimeIndex-1].mult(1.0-alpha)
@@ -331,12 +459,37 @@ public class ExtensionLMMWithDeterministicInterpolation extends LIBORMarketModel
 
 
         for (int j = startTimeIndex; j < lowerIndex; j++) {
-            RandomVariableInterface variance = ((AbstractLiborCovarianceModelWithInterpolation)getCovarianceModel()).getVarianceForInterpolation(j);
+            RandomVariableInterface variance = ((AbstractLIBORCovarianceModelWithInterpolation)getCovarianceModel()).getVarianceForInterpolation(j);
             double currentTime = getTime(j);
             double nextTime	   = getTime(j+1);
             covariance = covariance.add(
                     variance.mult((nextTime - currentTime)/((liborPeriodEndTime - nextTime)*(liborPeriodEndTime - currentTime))) );
         }
         return covariance;
+    }
+
+	@Override
+	public Object clone() {
+		try {
+			Map<String, Object> properties = new HashMap<String, Object>();
+			properties.put("measure",		getMeasure().name());
+			properties.put("stateSpace",	getStateSpace().name());
+			return new ExtensionLMMWithInterpolation(getLiborPeriodDiscretization(), getAnalyticModel(),
+					getForwardRateCurve(), getDiscountCurve(), getRandomVariableFactory(), getCovarianceModel(),
+					properties, getInterpolationScheme(), interpolationDriver);
+		} catch (CalculationException e) {
+			return null;
+		}
+	}
+
+	@Override
+	public ExtensionLMMWithInterpolation getCloneWithModifiedCovarianceModel(AbstractLIBORCovarianceModel covarianceModel) {
+        ExtensionLMMWithInterpolation model = (ExtensionLMMWithInterpolation)this.clone();
+        model.covarianceModel = covarianceModel;
+		return model;
+	}
+
+    public InterpolationScheme getInterpolationScheme() {
+        return interpolationScheme;
     }
 }

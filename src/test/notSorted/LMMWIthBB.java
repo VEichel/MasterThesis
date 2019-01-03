@@ -1,10 +1,10 @@
 package notSorted;
 
 import montecarlo.interestrates.LIBORMarketModelWithBridge;
-import montecarlo.interestrates.modelplugins.AbstractLiborCovarianceModelWithInterpolation;
-import montecarlo.interestrates.modelplugins.LiborCovarianceModelWithInterpolation;
-import montecarlo.interestrates.modelplugins.LiborCovarianceModelWithInterpolation.EvaluationTimeScalingScheme;
-import montecarlo.interestrates.modelplugins.LiborCovarianceModelWithInterpolation.InterpolationVarianceScheme;
+import montecarlo.interestrates.modelplugins.AbstractLIBORCovarianceModelWithInterpolation;
+import montecarlo.interestrates.modelplugins.LIBORCovarianceModelWithInterpolation;
+import montecarlo.interestrates.modelplugins.LIBORCovarianceModelWithInterpolation.EvaluationTimeScalingScheme;
+import montecarlo.interestrates.modelplugins.LIBORCovarianceModelWithInterpolation.InterpolationVarianceScheme;
 import net.finmath.exception.CalculationException;
 import net.finmath.marketdata.model.AnalyticModelInterface;
 import net.finmath.marketdata.model.curves.DiscountCurveFromForwardCurve;
@@ -193,7 +193,7 @@ public class LMMWIthBB {
 			evaluationTimeScalingParameters[i] = 1.0; //+ timeDiscretization.getTimeStep(i) * 0.05;
 		}
 		
-		AbstractLiborCovarianceModelWithInterpolation covarianceModel = new LiborCovarianceModelWithInterpolation(liborCovarianceModel,
+		AbstractLIBORCovarianceModelWithInterpolation covarianceModel = new LIBORCovarianceModelWithInterpolation(liborCovarianceModel,
 									interpolationParameters, evaluationTimeScalingParameters, InterpolationVarianceScheme.FINEST, EvaluationTimeScalingScheme.FINEST, false);
 		
 		

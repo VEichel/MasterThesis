@@ -1,10 +1,10 @@
 package notSorted;
 
 import montecarlo.interestrates.LIBORMarketModelWithBridge;
-import montecarlo.interestrates.modelplugins.AbstractLiborCovarianceModelWithInterpolation;
-import montecarlo.interestrates.modelplugins.LiborCovarianceModelWithInterpolation;
-import montecarlo.interestrates.modelplugins.LiborCovarianceModelWithInterpolation.EvaluationTimeScalingScheme;
-import montecarlo.interestrates.modelplugins.LiborCovarianceModelWithInterpolation.InterpolationVarianceScheme;
+import montecarlo.interestrates.modelplugins.AbstractLIBORCovarianceModelWithInterpolation;
+import montecarlo.interestrates.modelplugins.LIBORCovarianceModelWithInterpolation;
+import montecarlo.interestrates.modelplugins.LIBORCovarianceModelWithInterpolation.EvaluationTimeScalingScheme;
+import montecarlo.interestrates.modelplugins.LIBORCovarianceModelWithInterpolation.InterpolationVarianceScheme;
 import montecarlo.interestrates.products.CollateralOption;
 import net.finmath.exception.CalculationException;
 import net.finmath.marketdata.model.AnalyticModelInterface;
@@ -201,7 +201,7 @@ public class AnalyticFormulaColleteralTest {
 		}
 		 
 		
-		AbstractLiborCovarianceModelWithInterpolation covarianceModel = new LiborCovarianceModelWithInterpolation(liborCovarianceModel, interpolationParameters, evaluationTimeScalingParameters, InterpolationVarianceScheme.FINEST, EvaluationTimeScalingScheme.FINEST, true);
+		AbstractLIBORCovarianceModelWithInterpolation covarianceModel = new LIBORCovarianceModelWithInterpolation(liborCovarianceModel, interpolationParameters, evaluationTimeScalingParameters, InterpolationVarianceScheme.FINEST, EvaluationTimeScalingScheme.FINEST, true);
 		
 		
 		/*

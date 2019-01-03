@@ -3,7 +3,7 @@ package montecarlo.interestrates.products;
 //TODO: for fixingOnLiborStart use change liborStartToEnd and dont use any libor. Numeraire is enough!
 
 import montecarlo.interestrates.LIBORMarketModelWithBridge;
-import montecarlo.interestrates.modelplugins.AbstractLiborCovarianceModelWithInterpolation;
+import montecarlo.interestrates.modelplugins.AbstractLIBORCovarianceModelWithInterpolation;
 import net.finmath.exception.CalculationException;
 import net.finmath.functions.AnalyticFormulas;
 import net.finmath.functions.NormalDistribution;
@@ -99,7 +99,7 @@ public class CollateralOption extends AbstractLIBORMonteCarloProduct {
 		   
 		    
 			//Calculate BB Variance:
-		    AbstractLiborCovarianceModelWithInterpolation covarianceModel = (AbstractLiborCovarianceModelWithInterpolation) interpolationModel.getCovarianceModel();
+		    AbstractLIBORCovarianceModelWithInterpolation covarianceModel = (AbstractLIBORCovarianceModelWithInterpolation) interpolationModel.getCovarianceModel();
 		    double bridgeVarianceAtFixing  = 0.0;
 			double bridgeVarianceAtPayment = 0.0;
 			double bridgeCovariance        = 0.0;

@@ -7,10 +7,10 @@ package notSorted;
 
 
 import montecarlo.interestrates.LIBORMarketModelWithBridge;
-import montecarlo.interestrates.modelplugins.AbstractLiborCovarianceModelWithInterpolation;
-import montecarlo.interestrates.modelplugins.LiborCovarianceModelWithInterpolation;
-import montecarlo.interestrates.modelplugins.LiborCovarianceModelWithInterpolation.EvaluationTimeScalingScheme;
-import montecarlo.interestrates.modelplugins.LiborCovarianceModelWithInterpolation.InterpolationVarianceScheme;
+import montecarlo.interestrates.modelplugins.AbstractLIBORCovarianceModelWithInterpolation;
+import montecarlo.interestrates.modelplugins.LIBORCovarianceModelWithInterpolation;
+import montecarlo.interestrates.modelplugins.LIBORCovarianceModelWithInterpolation.EvaluationTimeScalingScheme;
+import montecarlo.interestrates.modelplugins.LIBORCovarianceModelWithInterpolation.InterpolationVarianceScheme;
 import net.finmath.exception.CalculationException;
 import net.finmath.marketdata.calibration.ParameterObjectInterface;
 import net.finmath.marketdata.calibration.Solver;
@@ -301,7 +301,7 @@ public class LIBORMarketModelCalibrationTest {
 		double[] evaluationTimeScalingParameters = new double[timeDiscretization.getNumberOfTimeSteps()];
 		Arrays.fill(evaluationTimeScalingParameters, 0.8);
 		
-		AbstractLiborCovarianceModelWithInterpolation covarianceModelWithInterpolation = new LiborCovarianceModelWithInterpolation( ((LIBORMarketModel) liborMarketModelCalibrated).getCovarianceModel(),
+		AbstractLIBORCovarianceModelWithInterpolation covarianceModelWithInterpolation = new LIBORCovarianceModelWithInterpolation( ((LIBORMarketModel) liborMarketModelCalibrated).getCovarianceModel(),
 				interpolationParameters, evaluationTimeScalingParameters, InterpolationVarianceScheme.FINEST, EvaluationTimeScalingScheme.FINEST, true);
 	
 		BrownianMotionInterface interpolationDriver = new BrownianMotion(timeDiscretization, 1, numberOfPaths, /*seed*/ 18273625);

@@ -8,7 +8,7 @@ import org.apache.commons.lang3.ArrayUtils;
 
 import java.util.Arrays;
 
-public class LiborCovarianceModelWithInterpolation extends AbstractLiborCovarianceModelWithInterpolation {
+public class LIBORCovarianceModelWithInterpolation extends AbstractLIBORCovarianceModelWithInterpolation {
 
 	/**
 	 * 
@@ -16,7 +16,7 @@ public class LiborCovarianceModelWithInterpolation extends AbstractLiborCovarian
 	private static final long serialVersionUID = -8077895582118596189L;
 
 	public enum InterpolationVarianceScheme { PIECEWISECONSTANT, CONSTANT, FINEST }
-	public enum EvaluationTimeScalingScheme	{ PIECEWISECONSTANT, CONSTANT, FINEST }
+	public enum EvaluationTimeScalingScheme	{ PIECEWISECONSTANT, CONSTANT, FINEST, NONE /*@TODO*/ }
 		
 	
 	private final AbstractLIBORCovarianceModel	nonInterpolationModel;
@@ -28,12 +28,12 @@ public class LiborCovarianceModelWithInterpolation extends AbstractLiborCovarian
 	private final boolean nonInterpolationModelIsCalibrated;
 	
 	/**Standard Constructor
-	 * 
+	 *
 	 * @param nonInterpolationModel
 	 * @param interpolationParameters
 	 * @param interpolationVarianceScheme
 	 */
-	public LiborCovarianceModelWithInterpolation(
+	public LIBORCovarianceModelWithInterpolation(
 			AbstractLIBORCovarianceModel nonInterpolationModel,
 			double[] interpolationParameters,
 			double[] evaluationTimeScalingParameters,
@@ -105,12 +105,12 @@ public class LiborCovarianceModelWithInterpolation extends AbstractLiborCovarian
 		this.evaluationTimeScalingParameters = evaluationTimeScalingParameters;
 	}
 	
-	/**Constructor using the Interpolation Variance Scheme: constant.
+	/**Constructor using standard parameters. E.g. for initial calibration parameters.
 	 * 
 	 * @param nonInterpolationModel
-	 * @param interpolationParameters
+	 * @param
 	 */
-	public LiborCovarianceModelWithInterpolation(
+	public LIBORCovarianceModelWithInterpolation(
 			AbstractLIBORCovarianceModelParametric nonInterpolationModel,
 			double[] interpolationParameters) {
 		this(nonInterpolationModel, interpolationParameters, new double[] {1.0}, InterpolationVarianceScheme.CONSTANT, EvaluationTimeScalingScheme.CONSTANT, false);
@@ -194,7 +194,7 @@ public class LiborCovarianceModelWithInterpolation extends AbstractLiborCovarian
 	@Override
 	public RandomVariableInterface getEvaluationTimeScalingFactor(double time) {
 		
-		switch (interpolationVarianceScheme) {
+		switch (evaluationTimeScalingScheme) {
 				
 		case CONSTANT:
 			return new RandomVariable(evaluationTimeScalingParameters[0]);
@@ -236,7 +236,7 @@ public class LiborCovarianceModelWithInterpolation extends AbstractLiborCovarian
 
 	@Override
 	public Object clone() {
-		return new LiborCovarianceModelWithInterpolation(nonInterpolationModel, interpolationParameters, evaluationTimeScalingParameters, interpolationVarianceScheme, evaluationTimeScalingScheme, nonInterpolationModelIsCalibrated);
+		return new LIBORCovarianceModelWithInterpolation(nonInterpolationModel, interpolationParameters, evaluationTimeScalingParameters, interpolationVarianceScheme, evaluationTimeScalingScheme, nonInterpolationModelIsCalibrated);
 	}
 
 	@Override
@@ -260,7 +260,7 @@ public class LiborCovarianceModelWithInterpolation extends AbstractLiborCovarian
 			newNonInterpolationModel		   = (AbstractLIBORCovarianceModelParametric) nonInterpolationModel;
 		}
 		
-		return new LiborCovarianceModelWithInterpolation(newNonInterpolationModel, newInterpolationParameters, newEvaluationTimeScalingParameters, interpolationVarianceScheme, evaluationTimeScalingScheme, nonInterpolationModelIsCalibrated);
+		return new LIBORCovarianceModelWithInterpolation(newNonInterpolationModel, newInterpolationParameters, newEvaluationTimeScalingParameters, interpolationVarianceScheme, evaluationTimeScalingScheme, nonInterpolationModelIsCalibrated);
 	}
 
 	@Override

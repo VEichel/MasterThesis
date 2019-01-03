@@ -1,7 +1,7 @@
 package notSorted;
 
 import montecarlo.interestrates.LIBORMarketModelWithBridge;
-import montecarlo.interestrates.modelplugins.AbstractLiborCovarianceModelWithInterpolation;
+import montecarlo.interestrates.modelplugins.AbstractLIBORCovarianceModelWithInterpolation;
 import net.finmath.exception.CalculationException;
 import net.finmath.montecarlo.RandomVariable;
 import net.finmath.montecarlo.interestrate.LIBORModelMonteCarloSimulationInterface;
@@ -58,7 +58,7 @@ public class OldColleteralOption extends AbstractLIBORMonteCarloProduct {
 		    int periodStartToFixingIndex     = fixingIndex  - interpolationModel.getTimeIndex(liborStartTime);
 		    
 			//Calculate BB Variance:
-			AbstractLiborCovarianceModelWithInterpolation covarianceModel = (AbstractLiborCovarianceModelWithInterpolation) interpolationModel.getCovarianceModel();
+			AbstractLIBORCovarianceModelWithInterpolation covarianceModel = (AbstractLIBORCovarianceModelWithInterpolation) interpolationModel.getCovarianceModel();
 			double bridgeVarianceAtFixing  = 0.0;
 			double bridgeVarianceAtPayment = 0.0;
 			double bridgeCovariance        = 0.0;

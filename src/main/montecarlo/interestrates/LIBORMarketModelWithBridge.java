@@ -1,6 +1,6 @@
 package montecarlo.interestrates;
 
-import montecarlo.interestrates.modelplugins.AbstractLiborCovarianceModelWithInterpolation;
+import montecarlo.interestrates.modelplugins.AbstractLIBORCovarianceModelWithInterpolation;
 import net.finmath.exception.CalculationException;
 import net.finmath.functions.AnalyticFormulas;
 import net.finmath.marketdata.model.AnalyticModelInterface;
@@ -48,7 +48,7 @@ public class LIBORMarketModelWithBridge extends AbstractModel implements LIBORMa
 	private DiscountCurveInterface			discountCurve;
 
 	private final AbstractRandomVariableFactory	randomVariableFactory;
-	private 	  AbstractLiborCovarianceModelWithInterpolation	covarianceModel;
+	private AbstractLIBORCovarianceModelWithInterpolation covarianceModel;
 
 	private AbstractSwaptionMarketData		swaptionMarketData;
 
@@ -91,7 +91,7 @@ public class LIBORMarketModelWithBridge extends AbstractModel implements LIBORMa
 			ForwardCurveInterface								forwardRateCurve,
 			DiscountCurveInterface								discountCurve,
 			AbstractRandomVariableFactory						randomVariableFactory,
-			AbstractLiborCovarianceModelWithInterpolation		covarianceModel,
+			AbstractLIBORCovarianceModelWithInterpolation covarianceModel,
 			CalibrationItem[]									calibrationItems,
 			Map<String, ?>									 	properties,
 
@@ -121,9 +121,9 @@ public class LIBORMarketModelWithBridge extends AbstractModel implements LIBORMa
 		// Perform calibration, if data is given
 		if(calibrationItems != null && calibrationItems.length > 0) {
 
-			AbstractLiborCovarianceModelWithInterpolation covarianceModelParametric = null;
+			AbstractLIBORCovarianceModelWithInterpolation covarianceModelParametric = null;
 			try {
-				covarianceModelParametric = (AbstractLiborCovarianceModelWithInterpolation)covarianceModel;
+				covarianceModelParametric = (AbstractLIBORCovarianceModelWithInterpolation)covarianceModel;
 			}
 			catch(Exception e) {
 				throw new ClassCastException("Calibration is currently restricted to parametric covariance models (AbstractLIBORCovarianceModelParametric).");
@@ -138,7 +138,7 @@ public class LIBORMarketModelWithBridge extends AbstractModel implements LIBORMa
 				calibrationTargetValues[i]	= calibrationItems[i].calibrationTargetValue;
 				calibrationWeights[i]		= calibrationItems[i].calibrationWeight;
 			}
-			this.covarianceModel    = (AbstractLiborCovarianceModelWithInterpolation) covarianceModelParametric.getCloneCalibrated(this, calibrationProducts, calibrationTargetValues, calibrationWeights, calibrationParameters);
+			this.covarianceModel    = (AbstractLIBORCovarianceModelWithInterpolation) covarianceModelParametric.getCloneCalibrated(this, calibrationProducts, calibrationTargetValues, calibrationWeights, calibrationParameters);
 		}
 
 		numeraires = new ConcurrentHashMap<Integer, RandomVariableInterface>();
@@ -151,7 +151,7 @@ public class LIBORMarketModelWithBridge extends AbstractModel implements LIBORMa
 			TimeDiscretizationInterface						liborPeriodDiscretization,
 			ForwardCurveInterface 							forwardRateCurve, 
 			DiscountCurveInterface 							discountCurve,
-			AbstractLiborCovarianceModelWithInterpolation 	covarianceModel,
+			AbstractLIBORCovarianceModelWithInterpolation covarianceModel,
 			AbstractSwaptionMarketData 						swaptionMarketData, 
 			Map<String, Object> 							properties,
 			BrownianMotionInterface 						interpolationDriver
@@ -784,7 +784,7 @@ public class LIBORMarketModelWithBridge extends AbstractModel implements LIBORMa
 	public LIBORMarketModelWithBridge getCloneWithModifiedCovarianceModel(AbstractLIBORCovarianceModel covarianceModel) {
 		LIBORMarketModelWithBridge model = (LIBORMarketModelWithBridge)this.clone();
 		try {
-			model.covarianceModel = (AbstractLiborCovarianceModelWithInterpolation) covarianceModel;
+			model.covarianceModel = (AbstractLIBORCovarianceModelWithInterpolation) covarianceModel;
 		} catch (Exception exception) {
 			throw exception;
 		}
@@ -797,7 +797,7 @@ public class LIBORMarketModelWithBridge extends AbstractModel implements LIBORMa
 		AnalyticModelInterface			analyticModel				= this.curveModel;
 		ForwardCurveInterface			forwardRateCurve			= this.forwardRateCurve;
 		DiscountCurveInterface			discountCurve				= this.discountCurve;
-		AbstractLiborCovarianceModelWithInterpolation	covarianceModel				= this.covarianceModel;
+		AbstractLIBORCovarianceModelWithInterpolation covarianceModel				= this.covarianceModel;
 		AbstractSwaptionMarketData		swaptionMarketData			= null;		// No recalibration, unless new swaption data is specified
 		Map<String, Object>				properties					= new HashMap<String, Object>();
 		properties.put("measure",		measure.name());
@@ -817,7 +817,7 @@ public class LIBORMarketModelWithBridge extends AbstractModel implements LIBORMa
 			throw new RuntimeException("Forward rate shift clone currently disabled.");
 		}
 		if(dataModified.containsKey("covarianceModel")) {
-			covarianceModel = (AbstractLiborCovarianceModelWithInterpolation)dataModified.get("covarianceModel");
+			covarianceModel = (AbstractLIBORCovarianceModelWithInterpolation)dataModified.get("covarianceModel");
 		}
 		if(dataModified.containsKey("swaptionMarketData")) {
 			swaptionMarketData = (AbstractSwaptionMarketData)dataModified.get("swaptionMarketData");
