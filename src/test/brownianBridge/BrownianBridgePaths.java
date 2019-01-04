@@ -1,6 +1,6 @@
 package brownianBridge;
 
-import montecarlo.interestrates.BrownianBridgeWithVariance;
+import montecarlo.interestrates.VariatingBrownianBridge;
 import net.finmath.montecarlo.BrownianBridge;
 import net.finmath.montecarlo.BrownianMotion;
 import net.finmath.montecarlo.BrownianMotionInterface;
@@ -42,7 +42,7 @@ public class BrownianBridgePaths {
 			variances[i] = new RandomVariable(0.02);
 		}
 		//variances[variances.length - 1] = new RandomVariable(0.5);
-		BrownianBridgeWithVariance varianceBridge = new BrownianBridgeWithVariance(timeDiscretization, standardMotion, variances);
+		VariatingBrownianBridge varianceBridge = new VariatingBrownianBridge(timeDiscretization, standardMotion, variances);
 		
 		RandomVariableInterface[] bridgeValue = new RandomVariableInterface[timeDiscretization.getNumberOfTimes()];
 		RandomVariableInterface[] bridgeValueWithVariance = new RandomVariableInterface[timeDiscretization.getNumberOfTimes()];

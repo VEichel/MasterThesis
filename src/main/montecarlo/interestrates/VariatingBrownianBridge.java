@@ -3,6 +3,7 @@ package montecarlo.interestrates;
 
 import net.finmath.montecarlo.AbstractRandomVariableFactory;
 import net.finmath.montecarlo.BrownianMotionInterface;
+import net.finmath.montecarlo.RandomVariable;
 import net.finmath.montecarlo.RandomVariableFactory;
 import net.finmath.stochastic.RandomVariableInterface;
 import net.finmath.time.TimeDiscretizationInterface;
@@ -10,7 +11,7 @@ import net.finmath.time.TimeDiscretizationInterface;
 import java.io.IOException;
 import java.util.Arrays;
 
-public class BrownianBridgeWithVariance implements BrownianMotionInterface {
+public class VariatingBrownianBridge implements BrownianMotionInterface {
 
 	private final TimeDiscretizationInterface						timeDiscretization;
 
@@ -24,8 +25,8 @@ public class BrownianBridgeWithVariance implements BrownianMotionInterface {
 	
 	private final BrownianMotionInterface generator;
 
-	public BrownianBridgeWithVariance(TimeDiscretizationInterface timeDiscretization,
-			BrownianMotionInterface generator, RandomVariableInterface[] variances, AbstractRandomVariableFactory randomVariableFactory) {
+	public VariatingBrownianBridge(TimeDiscretizationInterface timeDiscretization,
+								   BrownianMotionInterface generator, RandomVariableInterface[] variances, AbstractRandomVariableFactory randomVariableFactory) {
 		super();
 		this.timeDiscretization = timeDiscretization;	
 		this.variances = variances;
@@ -39,22 +40,18 @@ public class BrownianBridgeWithVariance implements BrownianMotionInterface {
 	 * @param generator
 	 * @param variances
 	 */
-	public BrownianBridgeWithVariance(TimeDiscretizationInterface timeDiscretization,
-			BrownianMotionInterface generator, RandomVariableInterface[] variances) {
+	public VariatingBrownianBridge(TimeDiscretizationInterface timeDiscretization,
+								   BrownianMotionInterface generator, RandomVariableInterface[] variances) {
 		this(timeDiscretization, generator, variances, new RandomVariableFactory());
 	}
 	
-	public BrownianBridgeWithVariance(TimeDiscretizationInterface timeDiscretization,
-			BrownianMotionInterface generator, double variance) {
-		this.randomVariableFactory = new RandomVariableFactory();
-		
-		RandomVariableInterface[] variances = new RandomVariableInterface[timeDiscretization.getNumberOfTimeSteps()];
-		Arrays.fill(variances, new RandomVariableFactory().createRandomVariable(variance));
-		
-		this.timeDiscretization = timeDiscretization;	
+	public VariatingBrownianBridge(TimeDiscretizationInterface timeDiscretization,
+								   BrownianMotionInterface generator, RandomVariableInterface[] variances,
+								   RandomVariableFactory randomVariableFactory) {
+		this.timeDiscretization = timeDiscretization;
 		this.variances = variances;
 		this.generator = generator;
-		
+		this.randomVariableFactory = randomVariableFactory;
 	}
 
 	
@@ -129,7 +126,7 @@ public class BrownianBridgeWithVariance implements BrownianMotionInterface {
 	 */
 	@Override
 	public BrownianMotionInterface getCloneWithModifiedSeed(int seed) {
-		return new BrownianBridgeWithVariance(getTimeDiscretization(), this.generator.getCloneWithModifiedSeed(seed), variances);
+		return new VariatingBrownianBridge(getTimeDiscretization(), this.generator.getCloneWithModifiedSeed(seed), variances);
 	}
 
 	/* (non-Javadoc)
@@ -137,7 +134,7 @@ public class BrownianBridgeWithVariance implements BrownianMotionInterface {
 	 */
 	@Override
 	public BrownianMotionInterface getCloneWithModifiedTimeDiscretization(TimeDiscretizationInterface newTimeDiscretization) {
-		return new BrownianBridgeWithVariance(newTimeDiscretization, this.generator, this.variances);
+		return new VariatingBrownianBridge(newTimeDiscretization, this.generator, this.variances);
 	}
 
 	@Override

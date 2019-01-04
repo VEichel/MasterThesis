@@ -650,8 +650,8 @@ public class LIBORMarketModelWithBridge extends AbstractModel implements LIBORMa
 			TimeDiscretizationInterface bridgeDiscretization    = new TimeDiscretization(
 					Arrays.copyOfRange(completeTimeDiscretization.getAsDoubleArray(), getTimeIndex(liborPeriodStart), getTimeIndex(liborPeriodEnd) + 1));
 			
-			BrownianBridgeWithVariance brownianBridge = new BrownianBridgeWithVariance(bridgeDiscretization, interpolationDriver, covarianceModel.getVarianceForInterpolationPeriod(liborIndex), randomVariableFactory);
-					//new BrownianBridgeWithVariance(bridgeDiscretization, getProcess().getNumberOfPaths(), getRandomVariableForConstant(0.0), getRandomVariableForConstant(0.0),
+			VariatingBrownianBridge brownianBridge = new VariatingBrownianBridge(bridgeDiscretization, interpolationDriver, covarianceModel.getVarianceForInterpolationPeriod(liborIndex), randomVariableFactory);
+					//new VariatingBrownianBridge(bridgeDiscretization, getProcess().getNumberOfPaths(), getRandomVariableForConstant(0.0), getRandomVariableForConstant(0.0),
 					//covarianceModel.getVarianceForInterpolationPeriod(liborIndex));
 			
 			brownianBridgeValues[liborIndex] = new RandomVariableInterface[bridgeDiscretization.getNumberOfTimes()];
